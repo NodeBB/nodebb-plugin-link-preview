@@ -1,8 +1,8 @@
-<div class="card col-6 position-relative link-preview">
+<div class="card col-md-9 col-lg-6 position-relative link-preview">
 	{{{ if images.length }}}
 	{{{ each images }}}
 	{{{ if @first }}}
-	<img src="{@value}" class="card-img-top" style="max-height: 15rem;" />
+	<img src="{@value}" class="card-img-top not-responsive" style="max-height: 15rem;" />
 	{{{ end }}}
 	{{{ end }}}
 	{{{ end }}}
@@ -18,7 +18,7 @@
 		{{{ if favicons.length }}}
 		{{{ each favicons }}}
 		{{{ if @first }}}
-		<img src="{@value}" alt="favicon" style="max-width: 21px; max-height: 21px;" />
+		<img src="{@value}" alt="favicon" class="not-responsive" style="max-width: 21px; max-height: 21px;" />
 		{{{ end }}}
 		{{{ end }}}
 		{{{ end }}}
