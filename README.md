@@ -1,17 +1,17 @@
 # Link Preview Plugin for NodeBB
 
-A starter kit for quickly creating NodeBB plugins. Comes with a pre-setup LESS file, server side JS script with an `action:app.load` hook, and a client-side script. Most plugins need at least one of the above, so this ought to save you some time. For a full list of hooks have a look at our [wiki page](https://github.com/NodeBB/NodeBB/wiki/Hooks), and for more information about creating plugins please visit our [documentation portal](https://docs.nodebb.org/).
+This plugin adds in additional post parsing capability to NodeBB so that any external links are automatically expanded into an interactive box containing any available metadata (e.g. photo, title, description, etc.)
 
-Fork this or copy it, and using your favourite text editor find and replace all instances of `nodebb-plugin-link-preview` with `nodebb-plugin-your-plugins-name`. Change the author's name in the LICENSE and package.json files.
-
-## Hello World
-
-Really simple, just edit `static/lib/main.js` and paste in `console.log('hello world');`, and that's it!
+The content shown in the box is powered by [Open Graph tags](https://ogp.me), and this plugin uses [link-preview-js](https://www.npmjs.com/package/link-preview-js) in the backend.
 
 ## Installation
 
+This plugin comes bundled with NodeBB installs as of v3.1.0. If you wish to use it in older versions, or wish to install it manually, run either of the two commands below:
+
     npm install nodebb-plugin-link-preview
+
+    yarn add nodebb-plugin-link-preview
 
 ## Screenshots
 
-Don't forget to add screenshots!
+![A NodeBB post with an embedded link to a GitHub issue — it looks great!](./screenshots/embed.png)
