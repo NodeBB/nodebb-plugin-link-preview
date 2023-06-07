@@ -19,6 +19,20 @@ plugin.init = async (params) => {
 	routeHelpers.setupAdminPageRoute(router, '/admin/plugins/link-preview', [], controllers.renderAdminPage);
 };
 
+plugin.applyDefaults = async (data) => {
+	const { plugin, values } = data;
+
+	if (plugin === 'link-preview') {
+		['embedHtml', 'embedImage', 'embedAudio', 'embedVideo'].forEach((prop) => {
+			if (!values.hasOwnProperty(prop)) {
+				values[prop] = 'on';
+			}
+		});
+	}
+
+	return data;
+};
+
 async function process(content) {
 	const anchorRegex = /<a\s+(?:[^>]*?\s+)?href=["']([^"']*)["'][^>]*>(.*?)<\/a>/g;
 	const matches = [];

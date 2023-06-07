@@ -5,20 +5,12 @@
 	"hooks": [
 		{ "hook": "static:app.load", "method": "init" },
 		{ "hook": "filter:admin.header.build", "method": "addAdminNavigation" },
+		{ "hook": "filter:settings.get", "method": "applyDefaults" },
 		{ "hook": "filter:parse.post", "method": "onParse" },
 		{ "hook": "filter:parse.raw", "method": "onParse" }
 	],
-	"staticDirs": {
-		"static": "./static"
-	},
 	"scss": [
 		"static/scss/link-preview.scss"
-	],
-	"scripts": [
-		"static/lib/main.js"
-	],
-	"acpScripts": [
-		"static/lib/acp-main.js"
 	],
 	"modules": {
 		"../admin/plugins/link-preview.js": "./static/lib/admin.js"
