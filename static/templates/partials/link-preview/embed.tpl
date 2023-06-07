@@ -1,10 +1,8 @@
-<div class="card col-6 position-relative" component="link-preview">
+<div class="card col-6 position-relative link-preview">
 	{{{ if images.length }}}
 	{{{ each images }}}
 	{{{ if @first }}}
-	<div class="d-block overflow-hidden" style="max-height: 15rem;">
-		<img src="{@value}" class="card-img-top" />
-	</div>
+	<img src="{@value}" class="card-img-top" style="max-height: 15rem;" />
 	{{{ end }}}
 	{{{ end }}}
 	{{{ end }}}
