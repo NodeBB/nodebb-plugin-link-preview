@@ -66,6 +66,9 @@ async function process(content) {
 				},
 			});
 
+			const parsedUrl = new URL(anchor);
+			preview.hostname = parsedUrl.hostname;
+
 			cache.set(`link-preview:${anchor}`, preview);
 			return await render(preview, false);
 		} catch (e) {
