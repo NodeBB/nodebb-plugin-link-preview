@@ -54,49 +54,50 @@ async function process(content) {
 
 		const cached = cache.get(`link-preview:${anchor}`);
 		if (cached) {
-			return await render(cached, true);
+			return await render(cached);
 		}
 
-		try {
-			const preview = await getLinkPreview(anchor, {
-				resolveDNSHost: async url => new Promise((resolve, reject) => {
-					const { hostname } = new URL(url);
-					dns.lookup(hostname, (err, address) => {
-						if (err) {
-							reject(err);
-							return;
-						}
-
-						resolve(address); // if address resolves to localhost or '127.0.0.1' library will throw an error
-					});
-				}),
-				followRedirects: `manual`,
-				handleRedirects: (baseURL, forwardedURL) => {
-					const urlObj = new URL(baseURL);
-					const forwardedURLObj = new URL(forwardedURL);
-					if (
-						forwardedURLObj.hostname === urlObj.hostname ||
-						forwardedURLObj.hostname === `www.${urlObj.hostname}` ||
-						`www.${forwardedURLObj.hostname}` === urlObj.hostname
-					) {
-						return true;
+		// Generate the preview, but return false for now so as to not block response
+		getLinkPreview(anchor, {
+			resolveDNSHost: async url => new Promise((resolve, reject) => {
+				const { hostname } = new URL(url);
+				dns.lookup(hostname, (err, address) => {
+					if (err) {
+						reject(err);
+						return;
 					}
 
-					return false;
-				},
-			});
+					resolve(address); // if address resolves to localhost or '127.0.0.1' library will throw an error
+				});
+			}),
+			followRedirects: `manual`,
+			handleRedirects: (baseURL, forwardedURL) => {
+				const urlObj = new URL(baseURL);
+				const forwardedURLObj = new URL(forwardedURL);
+				if (
+					forwardedURLObj.hostname === urlObj.hostname ||
+					forwardedURLObj.hostname === `www.${urlObj.hostname}` ||
+					`www.${forwardedURLObj.hostname}` === urlObj.hostname
+				) {
+					return true;
+				}
 
+				return false;
+			},
+		}).then((preview) => {
 			const parsedUrl = new URL(anchor);
 			preview.hostname = parsedUrl.hostname;
 
+			winston.verbose(`[link-preview] ${preview.url} (${preview.contentType}, cache: miss)`);
 			cache.set(`link-preview:${anchor}`, preview);
-			return await render(preview, false);
-		} catch (e) {
+		}).catch(() => {
+			winston.verbose(`[link-preview] ${anchor} (invalid, cache: miss)`);
 			cache.set(`link-preview:${anchor}`, {
 				url: anchor,
 			});
-			return false;
-		}
+		});
+
+		return false;
 	}));
 
 	// Replace match with embed
@@ -113,11 +114,11 @@ async function process(content) {
 	return content;
 }
 
-async function render(preview, cached) {
+async function render(preview) {
 	const { app } = require.main.require('./src/webserver');
 	const { embedHtml, embedImage, embedAudio, embedVideo } = await meta.settings.get('link-preview');
 
-	winston.info(`[link-preview] ${preview.url} (${preview.contentType || 'invalid'}, ${cached ? 'from cache' : 'no cache'})`);
+	winston.verbose(`[link-preview] ${preview.url} (${preview.contentType || 'invalid'}, cache: hit)`);
 
 	if (embedHtml && preview.contentType.startsWith('text/html')) {
 		return await app.renderAsync('partials/link-preview/html', preview);
