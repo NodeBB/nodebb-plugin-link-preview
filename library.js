@@ -120,6 +120,10 @@ async function render(preview) {
 
 	winston.verbose(`[link-preview] ${preview.url} (${preview.contentType || 'invalid'}, cache: hit)`);
 
+	if (!preview.contentType) {
+		return false;
+	}
+
 	if (embedHtml && preview.contentType.startsWith('text/html')) {
 		return await app.renderAsync('partials/link-preview/html', preview);
 	}
