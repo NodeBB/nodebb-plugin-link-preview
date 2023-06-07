@@ -7,11 +7,14 @@
 	{{{ end }}}
 	{{{ end }}}
 	<div class="card-body">
-		<h5 class="card-title">{title}</h5>
+		<h5 class="card-title">
+			<a href="{url}">
+				{title}
+			</a>
+		</h5>
 		<p class="card-text line-clamp-3">{description}</p>
-		<a href="{url}" class="stretched-link"></a>
 	</div>
-	<div class="card-footer text-body-secondary small d-flex gap-2 align-items-center lh-2">
+	<a href="{url}" class="card-footer text-body-secondary small d-flex gap-2 align-items-center lh-2">
 		{{{ if favicons.length }}}
 		{{{ each favicons }}}
 		{{{ if @first }}}
@@ -20,5 +23,5 @@
 		{{{ end }}}
 		{{{ end }}}
 		<p class="d-inline-block text-truncate mb-0">{siteName} <span class="text-secondary">({hostname})</span></p>
-	</div>
+	</a>
 </div>

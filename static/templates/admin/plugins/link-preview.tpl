@@ -25,6 +25,10 @@
 				<input type="checkbox" class="form-check-input" id="embedVideo" name="embedVideo">
 				<label for="embedVideo" class="form-check-label">Video</label>
 			</div>
+
+			<p class="help-text">
+				Please note that the "audio" and "video" formats only apply if the URL is a direct link to the audio/video file. Links to video hosting sites (e.g. YouTube) would fall under the "websites" category.
+			</p>
 		</div>
 	</div>
 </form>

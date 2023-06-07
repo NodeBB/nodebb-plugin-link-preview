@@ -5,6 +5,7 @@ const dns = require('dns');
 
 const { getLinkPreview } = require('link-preview-js');
 
+const meta = require.main.require('./src/meta');
 const cache = require.main.require('./src/cache');
 
 const controllers = require('./lib/controllers');
@@ -37,6 +38,11 @@ async function process(content) {
 	const anchorRegex = /<a\s+(?:[^>]*?\s+)?href=["']([^"']*)["'][^>]*>(.*?)<\/a>/g;
 	const matches = [];
 	let match;
+
+	const { embedHtml, embedImage, embedAudio, embedVideo } = await meta.settings.get('link-preview');
+	if (![embedHtml, embedImage, embedAudio, embedVideo].some(prop => prop === 'on')) {
+		return content;
+	}
 
 	// eslint-disable-next-line no-cond-assign
 	while ((match = anchorRegex.exec(content)) !== null) {
@@ -109,10 +115,24 @@ async function process(content) {
 
 async function render(preview, cached) {
 	const { app } = require.main.require('./src/webserver');
+	const { embedHtml, embedImage, embedAudio, embedVideo } = await meta.settings.get('link-preview');
 
 	winston.info(`[link-preview] ${preview.url} (${preview.contentType || 'invalid'}, ${cached ? 'from cache' : 'no cache'})`);
-	if (preview.contentType === 'text/html') {
-		return await app.renderAsync('partials/link-preview/embed', preview);
+
+	if (embedHtml && preview.contentType.startsWith('text/html')) {
+		return await app.renderAsync('partials/link-preview/html', preview);
+	}
+
+	if (embedImage && preview.contentType.startsWith('image/')) {
+		return await app.renderAsync('partials/link-preview/image', preview);
+	}
+
+	if (embedAudio && preview.contentType.startsWith('audio/')) {
+		return await app.renderAsync('partials/link-preview/audio', preview);
+	}
+
+	if (embedVideo && preview.contentType.startsWith('video/')) {
+		return await app.renderAsync('partials/link-preview/video', preview);
 	}
 
 	return false;
