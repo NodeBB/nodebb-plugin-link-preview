@@ -101,6 +101,8 @@ async function process(content) {
 	}));
 
 	// Replace match with embed
+	previews.reverse();
+	matches.reverse();
 	previews.forEach((preview, idx) => {
 		if (preview) {
 			const match = matches[idx];
