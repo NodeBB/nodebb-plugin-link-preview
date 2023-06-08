@@ -8,6 +8,8 @@ const { load } = require('cheerio');
 
 const meta = require.main.require('./src/meta');
 const cache = require.main.require('./src/cache');
+const posts = require.main.require('./src/posts');
+const postsCache = require.main.require('./src/posts/cache');
 
 const controllers = require('./lib/controllers');
 
@@ -35,7 +37,7 @@ plugin.applyDefaults = async (data) => {
 	return data;
 };
 
-async function process(content) {
+async function process(content, opts) {
 	const { embedHtml, embedImage, embedAudio, embedVideo } = await meta.settings.get('link-preview');
 	if (![embedHtml, embedImage, embedAudio, embedVideo].some(prop => prop === 'on')) {
 		return content;
@@ -49,6 +51,7 @@ async function process(content) {
 		if (cached) {
 			// eslint-disable-next-line no-await-in-loop
 			$anchor.replaceWith($(await render(cached)));
+			break;
 		}
 
 		// Generate the preview, but return false for now so as to not block response
@@ -78,12 +81,17 @@ async function process(content) {
 
 				return false;
 			},
-		}).then((preview) => {
+		}).then(async (preview) => {
 			const parsedUrl = new URL(url);
 			preview.hostname = parsedUrl.hostname;
 
 			winston.verbose(`[link-preview] ${preview.url} (${preview.contentType}, cache: miss)`);
 			cache.set(`link-preview:${url}`, preview);
+
+			if (opts.hasOwnProperty('pid') && await posts.exists(opts.pid)) {
+				console.log('deleting cache', opts.pid);
+				postsCache.del(String(opts.pid));
+			}
 		}).catch(() => {
 			winston.verbose(`[link-preview] ${url} (invalid, cache: miss)`);
 			cache.set(`link-preview:${url}`, { url });
@@ -124,9 +132,9 @@ async function render(preview) {
 
 plugin.onParse = async (payload) => {
 	if (typeof payload === 'string') { // raw
-		payload = await process(payload);
+		payload = await process(payload, {});
 	} else if (payload && payload.postData && payload.postData.content) { // post
-		payload.postData.content = await process(payload.postData.content);
+		payload.postData.content = await process(payload.postData.content, { pid: payload.postData.pid });
 	}
 
 	return payload;
