@@ -47,6 +47,11 @@ async function process(content, opts) {
 	for (const anchor of $('a')) {
 		const $anchor = $(anchor);
 		const url = $anchor.attr('href');
+
+		if ($anchor.hasClass('plugin-mentions-a')) {
+			break;
+		}
+
 		const cached = cache.get(`link-preview:${url}`);
 		if (cached) {
 			// eslint-disable-next-line no-await-in-loop
@@ -89,7 +94,6 @@ async function process(content, opts) {
 			cache.set(`link-preview:${url}`, preview);
 
 			if (opts.hasOwnProperty('pid') && await posts.exists(opts.pid)) {
-				console.log('deleting cache', opts.pid);
 				postsCache.del(String(opts.pid));
 			}
 		}).catch(() => {
