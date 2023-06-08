@@ -43,6 +43,7 @@
     "lint-staged": "13.2.2"
   },
   "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
     "link-preview-js": "^3.0.4"
   }
 }

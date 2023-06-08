@@ -4,6 +4,7 @@ const winston = require.main.require('winston');
 const dns = require('dns');
 
 const { getLinkPreview } = require('link-preview-js');
+const { load } = require('cheerio');
 
 const meta = require.main.require('./src/meta');
 const cache = require.main.require('./src/cache');
@@ -35,30 +36,23 @@ plugin.applyDefaults = async (data) => {
 };
 
 async function process(content) {
-	const anchorRegex = /<a\s+(?:[^>]*?\s+)?href=["']([^"']*)["'][^>]*>(.*?)<\/a>/g;
-	const matches = [];
-	let match;
-
 	const { embedHtml, embedImage, embedAudio, embedVideo } = await meta.settings.get('link-preview');
 	if (![embedHtml, embedImage, embedAudio, embedVideo].some(prop => prop === 'on')) {
 		return content;
 	}
 
-	// eslint-disable-next-line no-cond-assign
-	while ((match = anchorRegex.exec(content)) !== null) {
-		matches.push(match);
-	}
-
-	const previews = await Promise.all(matches.map(async (match) => {
-		const anchor = match[1];
-
-		const cached = cache.get(`link-preview:${anchor}`);
+	const $ = load(content, null, false);
+	for (const anchor of $('a')) {
+		const $anchor = $(anchor);
+		const url = $anchor.attr('href');
+		const cached = cache.get(`link-preview:${url}`);
 		if (cached) {
-			return await render(cached);
+			// eslint-disable-next-line no-await-in-loop
+			$anchor.replaceWith($(await render(cached)));
 		}
 
 		// Generate the preview, but return false for now so as to not block response
-		getLinkPreview(anchor, {
+		getLinkPreview(url, {
 			resolveDNSHost: async url => new Promise((resolve, reject) => {
 				const { hostname } = new URL(url);
 				dns.lookup(hostname, (err, address) => {
@@ -85,35 +79,18 @@ async function process(content) {
 				return false;
 			},
 		}).then((preview) => {
-			const parsedUrl = new URL(anchor);
+			const parsedUrl = new URL(url);
 			preview.hostname = parsedUrl.hostname;
 
 			winston.verbose(`[link-preview] ${preview.url} (${preview.contentType}, cache: miss)`);
-			cache.set(`link-preview:${anchor}`, preview);
+			cache.set(`link-preview:${url}`, preview);
 		}).catch(() => {
-			winston.verbose(`[link-preview] ${anchor} (invalid, cache: miss)`);
-			cache.set(`link-preview:${anchor}`, {
-				url: anchor,
-			});
+			winston.verbose(`[link-preview] ${url} (invalid, cache: miss)`);
+			cache.set(`link-preview:${url}`, { url });
 		});
+	}
 
-		return false;
-	}));
-
-	// Replace match with embed
-	previews.reverse();
-	matches.reverse();
-	previews.forEach((preview, idx) => {
-		if (preview) {
-			const match = matches[idx];
-			const { index } = match;
-			const { length } = match[0];
-
-			content = `${content.substring(0, index)}${preview}${content.substring(index + length)}`;
-		}
-	});
-
-	return content;
+	return $.html();
 }
 
 async function render(preview) {
