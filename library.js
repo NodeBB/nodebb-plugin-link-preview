@@ -51,8 +51,9 @@ async function process(content, opts) {
 	for (const anchor of $('a')) {
 		const $anchor = $(anchor);
 		const url = $anchor.attr('href');
+		const text = $anchor.text();
 
-		if ($anchor.hasClass('plugin-mentions-a')) {
+		if (url !== text) {
 			continue;
 		}
 
