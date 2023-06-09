@@ -9,6 +9,8 @@ const { load } = require('cheerio');
 const meta = require.main.require('./src/meta');
 const cache = require.main.require('./src/cache');
 const posts = require.main.require('./src/posts');
+const topics = require.main.require('./src/topics');
+const websockets = require.main.require('./src/socket.io');
 const postsCache = require.main.require('./src/posts/cache');
 
 const controllers = require('./lib/controllers');
@@ -49,6 +51,7 @@ async function process(content, opts) {
 		const url = $anchor.attr('href');
 
 		if ($anchor.hasClass('plugin-mentions-a')) {
+			// eslint-disable-next-line no-continue
 			continue;
 		}
 
@@ -93,8 +96,23 @@ async function process(content, opts) {
 			winston.verbose(`[link-preview] ${preview.url} (${preview.contentType}, cache: miss)`);
 			cache.set(`link-preview:${url}`, preview);
 
+			// bust posts cache item
 			if (opts.hasOwnProperty('pid') && await posts.exists(opts.pid)) {
 				postsCache.del(String(opts.pid));
+
+				// fire post edit event with mocked data
+				if (opts.hasOwnProperty('tid') && await topics.exists(opts.tid)) {
+					$anchor.replaceWith($(await render(preview)));
+					websockets.in(`topic_${opts.tid}`).emit('event:post_edited', {
+						post: {
+							tid: opts.tid,
+							pid: opts.pid,
+							changed: true,
+							content: $.html(),
+						},
+						topic: {},
+					});
+				}
 			}
 		}).catch(() => {
 			winston.verbose(`[link-preview] ${url} (invalid, cache: miss)`);
@@ -138,7 +156,10 @@ plugin.onParse = async (payload) => {
 	if (typeof payload === 'string') { // raw
 		payload = await process(payload, {});
 	} else if (payload && payload.postData && payload.postData.content) { // post
-		payload.postData.content = await process(payload.postData.content, { pid: payload.postData.pid });
+		payload.postData.content = await process(payload.postData.content, {
+			pid: payload.postData.pid,
+			tid: payload.postData.tid,
+		});
 	}
 
 	return payload;
