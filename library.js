@@ -49,7 +49,7 @@ async function process(content, opts) {
 		const url = $anchor.attr('href');
 
 		if ($anchor.hasClass('plugin-mentions-a')) {
-			break;
+			continue;
 		}
 
 		const cached = cache.get(`link-preview:${url}`);
