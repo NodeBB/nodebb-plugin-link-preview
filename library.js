@@ -1,3 +1,5 @@
+/* eslint-disable no-continue */
+
 'use strict';
 
 const winston = require.main.require('winston');
@@ -51,15 +53,16 @@ async function process(content, opts) {
 		const url = $anchor.attr('href');
 
 		if ($anchor.hasClass('plugin-mentions-a')) {
-			// eslint-disable-next-line no-continue
 			continue;
 		}
 
 		const cached = cache.get(`link-preview:${url}`);
 		if (cached) {
-			// eslint-disable-next-line no-await-in-loop
-			$anchor.replaceWith($(await render(cached)));
-			break;
+			if (cached.contentType) {
+				// eslint-disable-next-line no-await-in-loop
+				$anchor.replaceWith($(await render(cached)));
+			}
+			continue;
 		}
 
 		// Generate the preview, but return false for now so as to not block response
