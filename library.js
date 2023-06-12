@@ -50,10 +50,12 @@ async function process(content, opts) {
 	const $ = load(content, null, false);
 	for (const anchor of $('a')) {
 		const $anchor = $(anchor);
+
+		// Skip if the anchor has link text, or has text on the same line.
 		const url = $anchor.attr('href');
 		const text = $anchor.text();
-
-		if (url !== text) {
+		const hasSiblings = !!anchor.prev || !!anchor.next;
+		if (hasSiblings || url !== text) {
 			continue;
 		}
 
