@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 /* eslint-disable no-continue */
 
 'use strict';
@@ -59,10 +60,14 @@ async function process(content, opts) {
 			continue;
 		}
 
+		const special = await handleSpecialEmbed(url, $anchor);
+		if (special) {
+			continue;
+		}
+
 		const cached = cache.get(`link-preview:${url}`);
 		if (cached) {
 			if (cached.contentType) {
-				// eslint-disable-next-line no-await-in-loop
 				$anchor.replaceWith($(await render(cached)));
 			}
 			continue;
@@ -153,6 +158,35 @@ async function render(preview) {
 
 	if (embedVideo && preview.contentType.startsWith('video/')) {
 		return await app.renderAsync('partials/link-preview/video', preview);
+	}
+
+	return false;
+}
+
+async function handleSpecialEmbed(url, $anchor) {
+	const { app } = require.main.require('./src/webserver');
+	const { hostname, searchParams, pathname } = new URL(url);
+	const { embedYoutube, embedVimeo } = await meta.settings.get('link-preview');
+
+	if (embedYoutube === 'on' && ['youtube.com', 'www.youtube.com', 'youtu.be'].some(x => hostname === x)) {
+		let video;
+		if (hostname === 'youtu.be') {
+			video = pathname.slice(1);
+		} else {
+			video = searchParams.get('v');
+		}
+		const html = await app.renderAsync('partials/link-preview/youtube', { video });
+		$anchor.replaceWith(html);
+
+		return true;
+	}
+
+	if (embedVimeo === 'on' && hostname === 'vimeo.com') {
+		const video = pathname.slice(1);
+		const html = await app.renderAsync('partials/link-preview/vimeo', { video });
+		$anchor.replaceWith(html);
+
+		return true;
 	}
 
 	return false;

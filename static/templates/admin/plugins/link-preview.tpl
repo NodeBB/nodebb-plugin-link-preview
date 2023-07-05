@@ -32,8 +32,28 @@
 					</div>
 
 					<p class="form-text">
-						Please note that the "audio" and "video" formats only apply if the URL is a direct link to the audio/video file. Links to video hosting sites (e.g. YouTube) would fall under the "websites" category.
+						Please note that the "audio" and "video" formats only apply if the URL is a direct link to the audio/video file.
+						Links to video hosting sites (e.g. YouTube) would fall under the "websites" category unless explicitly covered by a special embed type.
 					</p>
+				</div>
+
+				<div class="mb-4">
+					<h5 class="fw-bold tracking-tight settings-header">Special Embeds</h5>
+
+					<p>
+						The following rules allow for more interactive previews via pre-defined defaults.
+						If disabled, then they will be treated like a regular "website" media type.
+					</p>
+
+					<div class="form-check form-switch mb-3">
+						<input type="checkbox" class="form-check-input" id="embedYoutube" name="embedYoutube">
+						<label for="embedYoutube" class="form-check-label">YouTube</label>
+					</div>
+
+					<div class="form-check form-switch mb-3">
+						<input type="checkbox" class="form-check-input" id="embedVimeo" name="embedVimeo">
+						<label for="embedVimeo" class="form-check-label">Vimeo</label>
+					</div>
 				</div>
 			</form>
 		</div>
