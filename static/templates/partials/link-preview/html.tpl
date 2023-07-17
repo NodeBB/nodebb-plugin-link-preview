@@ -2,7 +2,9 @@
 	{{{ if images.length }}}
 	{{{ each images }}}
 	{{{ if @first }}}
-	<img src="{@value}" class="card-img-top not-responsive" style="max-height: 15rem;" />
+	<a href="{url}">
+		<img src="{@value}" class="card-img-top not-responsive" style="max-height: 15rem;" />
+	</a>
 	{{{ end }}}
 	{{{ end }}}
 	{{{ end }}}
