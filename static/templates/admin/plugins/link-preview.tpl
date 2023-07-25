@@ -54,6 +54,11 @@
 						<input type="checkbox" class="form-check-input" id="embedVimeo" name="embedVimeo">
 						<label for="embedVimeo" class="form-check-label">Vimeo</label>
 					</div>
+
+					<div class="form-check form-switch mb-3">
+						<input type="checkbox" class="form-check-input" id="embedTiktok" name="embedTiktok">
+						<label for="embedTiktok" class="form-check-label">Vimeo</label>
+					</div>
 				</div>
 			</form>
 		</div>

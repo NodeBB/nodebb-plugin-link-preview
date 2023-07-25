@@ -178,7 +178,7 @@ async function render(preview) {
 async function handleSpecialEmbed(url, $anchor) {
 	const { app } = require.main.require('./src/webserver');
 	const { hostname, searchParams, pathname } = new URL(url);
-	const { embedYoutube, embedVimeo } = await meta.settings.get('link-preview');
+	const { embedYoutube, embedVimeo, embedTiktok } = await meta.settings.get('link-preview');
 
 	if (embedYoutube === 'on' && ['youtube.com', 'www.youtube.com', 'youtu.be'].some(x => hostname === x)) {
 		let video;
@@ -196,6 +196,14 @@ async function handleSpecialEmbed(url, $anchor) {
 	if (embedVimeo === 'on' && hostname === 'vimeo.com') {
 		const video = pathname.slice(1);
 		const html = await app.renderAsync('partials/link-preview/vimeo', { video });
+		$anchor.replaceWith(html);
+
+		return true;
+	}
+
+	if (embedTiktok === 'on' && ['tiktok.com', 'www.tiktok.com'].some(x => hostname === x)) {
+		const video = pathname.split('/')[3];
+		const html = await app.renderAsync('partials/link-preview/tiktok', { video });
 		$anchor.replaceWith(html);
 
 		return true;
