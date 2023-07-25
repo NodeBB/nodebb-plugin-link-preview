@@ -73,8 +73,9 @@ async function process(content, opts) {
 
 		const cached = cache.get(`link-preview:${url}`);
 		if (cached) {
-			if (cached.contentType) {
-				$anchor.replaceWith($(await render(cached)));
+			const html = await render(cached);
+			if (html) {
+				$anchor.replaceWith($(html));
 			}
 			continue;
 		}
@@ -113,13 +114,18 @@ async function process(content, opts) {
 			winston.verbose(`[link-preview] ${preview.url} (${preview.contentType}, cache: miss)`);
 			cache.set(`link-preview:${url}`, preview);
 
+			const html = await render(preview);
+			if (!html) {
+				return;
+			}
+
 			// bust posts cache item
 			if (opts.hasOwnProperty('pid') && await posts.exists(opts.pid)) {
 				postsCache.del(String(opts.pid));
 
 				// fire post edit event with mocked data
 				if (opts.hasOwnProperty('tid') && await topics.exists(opts.tid)) {
-					$anchor.replaceWith($(await render(preview)));
+					$anchor.replaceWith($(html));
 					websockets.in(`topic_${opts.tid}`).emit('event:post_edited', {
 						post: {
 							tid: opts.tid,
