@@ -4,6 +4,7 @@
 'use strict';
 
 const winston = require.main.require('winston');
+const nconf = require.main.require('nconf');
 const dns = require('dns');
 
 const { getLinkPreview } = require('link-preview-js');
@@ -53,11 +54,16 @@ async function process(content, opts) {
 		const $anchor = $(anchor);
 
 		// Skip if the anchor has link text, or has text on the same line.
-		const url = $anchor.attr('href');
+		let url = $anchor.attr('href');
 		const text = $anchor.text();
 		const hasSiblings = !!anchor.prev || !!anchor.next;
 		if (hasSiblings || url !== text) {
 			continue;
+		}
+
+		// Handle relative URLs
+		if (!url.startsWith('http')) {
+			url = `${nconf.get('url')}${url.startsWith('/') ? url : `/${url}`}`;
 		}
 
 		const special = await handleSpecialEmbed(url, $anchor);
