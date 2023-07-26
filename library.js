@@ -188,6 +188,8 @@ async function handleSpecialEmbed(url, $anchor) {
 		} else if (pathname.startsWith('/shorts')) {
 			video = pathname.split('/')[2];
 			short = true;
+		} else if (pathname.startsWith('/live')) {
+			video = pathname.split('/')[2];
 		} else {
 			video = searchParams.get('v');
 		}
