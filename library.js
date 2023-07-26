@@ -182,12 +182,16 @@ async function handleSpecialEmbed(url, $anchor) {
 
 	if (embedYoutube === 'on' && ['youtube.com', 'www.youtube.com', 'youtu.be'].some(x => hostname === x)) {
 		let video;
+		let short = false;
 		if (hostname === 'youtu.be') {
 			video = pathname.slice(1);
+		} else if (pathname.startsWith('/shorts')) {
+			video = pathname.split('/')[2];
+			short = true;
 		} else {
 			video = searchParams.get('v');
 		}
-		const html = await app.renderAsync('partials/link-preview/youtube', { video });
+		const html = await app.renderAsync(short ? 'partials/link-preview/youtube-short' : 'partials/link-preview/youtube', { video });
 		$anchor.replaceWith(html);
 
 		return true;
