@@ -57,7 +57,7 @@ async function process(content, opts) {
 		let url = $anchor.attr('href');
 		const text = $anchor.text();
 		const hasSiblings = !!anchor.prev || !!anchor.next;
-		if (hasSiblings || url !== text) {
+		if (hasSiblings || url !== text || anchor.parent.name !== 'p') {
 			continue;
 		}
 
