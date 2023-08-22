@@ -40,7 +40,7 @@
     "eslint-config-nodebb": "0.2.1",
     "eslint-plugin-import": "2.27.5",
     "husky": "8.0.3",
-    "lint-staged": "13.2.2"
+    "lint-staged": "14.0.1"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
