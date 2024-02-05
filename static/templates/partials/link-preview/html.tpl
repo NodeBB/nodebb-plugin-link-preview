@@ -2,8 +2,8 @@
 	{{{ if images.length }}}
 	{{{ each images }}}
 	{{{ if @first }}}
-	<a href="{url}">
-		<img src="{@value}" class="card-img-top not-responsive" style="max-height: 15rem;" />
+	<a href="{url}" title="{title}">
+		<img src="{@value}" class="card-img-top not-responsive" style="max-height: 15rem;" alt="Link Preview Image" />
 	</a>
 	{{{ end }}}
 	{{{ end }}}

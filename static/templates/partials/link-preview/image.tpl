@@ -1,1 +1,1 @@
-<img class="img-thumbnail" src="{url}" />
+<img class="img-thumbnail" src="{url}" alt="Link Preview Image" />
