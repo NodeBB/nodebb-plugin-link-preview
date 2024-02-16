@@ -10,6 +10,7 @@ const dns = require('dns');
 const { getLinkPreview } = require('link-preview-js');
 const { load } = require('cheerio');
 
+const db = require.main.require('./src/database');
 const meta = require.main.require('./src/meta');
 const cache = require.main.require('./src/cache');
 const posts = require.main.require('./src/posts');
@@ -42,6 +43,92 @@ plugin.applyDefaults = async (data) => {
 
 	return data;
 };
+
+async function preview(url) {
+	return getLinkPreview(url, {
+		resolveDNSHost: async url => new Promise((resolve, reject) => {
+			const { hostname } = new URL(url);
+			dns.lookup(hostname, (err, address) => {
+				if (err) {
+					reject(err);
+					return;
+				}
+
+				resolve(address); // if address resolves to localhost or '127.0.0.1' library will throw an error
+			});
+		}),
+		followRedirects: `manual`,
+		handleRedirects: (baseURL, forwardedURL) => {
+			const urlObj = new URL(baseURL);
+			const forwardedURLObj = new URL(forwardedURL);
+			if (
+				forwardedURLObj.hostname === urlObj.hostname ||
+				forwardedURLObj.hostname === `www.${urlObj.hostname}` ||
+				`www.${forwardedURLObj.hostname}` === urlObj.hostname
+			) {
+				return true;
+			}
+
+			return false;
+		},
+	}).then((preview) => {
+		winston.verbose(`[link-preview] ${preview.url} (${preview.contentType}, cache: miss)`);
+		cache.set(`link-preview:${url}`, preview);
+
+		return preview;
+	}).catch(() => {
+		winston.verbose(`[link-preview] ${url} (invalid, cache: miss)`);
+		cache.set(`link-preview:${url}`, { url });
+	});
+}
+
+async function processAttachments({ content, pid, tid }) {
+	// Retrieve attachments
+	const hashes = await db.getSortedSetMembers(`post:${pid}:attachments`);
+	const keys = hashes.map(hash => `attachment:${hash}`);
+	const attachments = (await db.getObjects(keys)).filter(Boolean);
+	const urls = attachments
+		.filter(attachment => cache.has(`link-preview:${attachment.url}`))
+		.map(attachment => attachment.url);
+
+	const previews = urls.map(url => cache.get(`link-preview:${url}`));
+	const html = await Promise.all(previews.map(async preview => await render(preview)));
+
+	// Append all readily-available previews to content
+	content = `${content}\n\n<div class="row">${html.map(html => `<div class="col-6">${html}</div>`).join('\n')}</div>`;
+
+	// Kickstart preview
+	const toFetch = attachments.filter(attachment => !cache.has(`link-preview:${attachment.url}`));
+	if (toFetch.length) {
+		Promise.all(toFetch.map(async attachment => preview(attachment.url))).then(async () => {
+			// bust posts cache item
+			if (await posts.exists(pid)) {
+				postsCache.del(String(pid));
+
+				// fire post edit event with mocked data
+				if (await topics.exists(tid)) {
+					const urls = attachments.map(attachment => attachment.url);
+
+					const previews = urls.map(url => cache.get(`link-preview:${url}`));
+					let html = await Promise.all(previews.map(async preview => await render(preview)));
+					html = `${content}\n\n<div class="row">${html.map(html => `<div class="col-6">${html}</div>`).join('\n')}</div>`;
+
+					websockets.in(`topic_${tid}`).emit('event:post_edited', {
+						post: {
+							tid,
+							pid,
+							changed: true,
+							content: html,
+						},
+						topic: {},
+					});
+				}
+			}
+		});
+	}
+
+	return content;
+}
 
 async function process(content, opts) {
 	const { embedHtml, embedImage, embedAudio, embedVideo } = await meta.settings.get('link-preview');
@@ -80,39 +167,10 @@ async function process(content, opts) {
 			continue;
 		}
 
-		// Generate the preview, but return false for now so as to not block response
-		getLinkPreview(url, {
-			resolveDNSHost: async url => new Promise((resolve, reject) => {
-				const { hostname } = new URL(url);
-				dns.lookup(hostname, (err, address) => {
-					if (err) {
-						reject(err);
-						return;
-					}
-
-					resolve(address); // if address resolves to localhost or '127.0.0.1' library will throw an error
-				});
-			}),
-			followRedirects: `manual`,
-			handleRedirects: (baseURL, forwardedURL) => {
-				const urlObj = new URL(baseURL);
-				const forwardedURLObj = new URL(forwardedURL);
-				if (
-					forwardedURLObj.hostname === urlObj.hostname ||
-					forwardedURLObj.hostname === `www.${urlObj.hostname}` ||
-					`www.${forwardedURLObj.hostname}` === urlObj.hostname
-				) {
-					return true;
-				}
-
-				return false;
-			},
-		}).then(async (preview) => {
+		// Generate the preview, but continue for now so as to not block response
+		preview(url).then(async (preview) => {
 			const parsedUrl = new URL(url);
 			preview.hostname = parsedUrl.hostname;
-
-			winston.verbose(`[link-preview] ${preview.url} (${preview.contentType}, cache: miss)`);
-			cache.set(`link-preview:${url}`, preview);
 
 			const html = await render(preview);
 			if (!html) {
@@ -137,9 +195,6 @@ async function process(content, opts) {
 					});
 				}
 			}
-		}).catch(() => {
-			winston.verbose(`[link-preview] ${url} (invalid, cache: miss)`);
-			cache.set(`link-preview:${url}`, { url });
 		});
 	}
 
@@ -222,10 +277,9 @@ plugin.onParse = async (payload) => {
 	if (typeof payload === 'string') { // raw
 		payload = await process(payload, {});
 	} else if (payload && payload.postData && payload.postData.content) { // post
-		payload.postData.content = await process(payload.postData.content, {
-			pid: payload.postData.pid,
-			tid: payload.postData.tid,
-		});
+		let { content, pid, tid } = payload.postData;
+		content = await processAttachments({ content, pid, tid });
+		payload.postData.content = await process(content, { pid, tid });
 	}
 
 	return payload;
