@@ -173,6 +173,10 @@ async function process(content, opts) {
 
 		// Generate the preview, but continue for now so as to not block response
 		preview(url).then(async (preview) => {
+			if (!preview) {
+				return;
+			}
+
 			const parsedUrl = new URL(url);
 			preview.hostname = parsedUrl.hostname;
 
