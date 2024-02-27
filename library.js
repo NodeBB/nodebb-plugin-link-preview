@@ -86,7 +86,7 @@ async function processAttachments({ content, pid, tid }) {
 	// Retrieve attachments
 	const hashes = await db.getSortedSetMembers(`post:${pid}:attachments`);
 	if (!hashes.length) {
-		return;
+		return content;
 	}
 
 	const keys = hashes.map(hash => `attachment:${hash}`);
