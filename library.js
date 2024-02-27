@@ -85,6 +85,10 @@ async function preview(url) {
 async function processAttachments({ content, pid, tid }) {
 	// Retrieve attachments
 	const hashes = await db.getSortedSetMembers(`post:${pid}:attachments`);
+	if (!hashes.length) {
+		return;
+	}
+
 	const keys = hashes.map(hash => `attachment:${hash}`);
 	const attachments = (await db.getObjects(keys)).filter(Boolean);
 	const urls = attachments
