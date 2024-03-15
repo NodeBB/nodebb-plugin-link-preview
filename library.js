@@ -82,64 +82,29 @@ async function preview(url) {
 	});
 }
 
-async function processAttachments({ content, pid, tid }) {
-	// Retrieve attachments
-	const hashes = await db.getSortedSetMembers(`post:${pid}:attachments`);
-	if (!hashes.length) {
-		return content;
-	}
-
-	const keys = hashes.map(hash => `attachment:${hash}`);
-	const attachments = (await db.getObjects(keys)).filter(Boolean);
-	const urls = attachments
-		.filter(attachment => cache.has(`link-preview:${attachment.url}`))
-		.map(attachment => attachment.url);
-
-	const previews = urls.map(url => cache.get(`link-preview:${url}`));
-	const html = await Promise.all(previews.map(async preview => await render(preview)));
-
-	// Append all readily-available previews to content
-	content = `${content}\n\n<div class="row">${html.map(html => `<div class="col-6">${html}</div>`).join('\n')}</div>`;
-
-	// Kickstart preview
-	const toFetch = attachments.filter(attachment => !cache.has(`link-preview:${attachment.url}`));
-	if (toFetch.length) {
-		Promise.all(toFetch.map(async attachment => preview(attachment.url))).then(async () => {
-			// bust posts cache item
-			if (await posts.exists(pid)) {
-				postsCache.del(String(pid));
-
-				// fire post edit event with mocked data
-				if (await topics.exists(tid)) {
-					const urls = attachments.map(attachment => attachment.url);
-
-					const previews = urls.map(url => cache.get(`link-preview:${url}`));
-					let html = await Promise.all(previews.map(async preview => await render(preview)));
-					html = `${content}\n\n<div class="row">${html.map(html => `<div class="col-6">${html}</div>`).join('\n')}</div>`;
-
-					websockets.in(`topic_${tid}`).emit('event:post_edited', {
-						post: {
-							tid,
-							pid,
-							changed: true,
-							content: html,
-						},
-						topic: {},
-					});
-				}
-			}
-		});
-	}
-
-	return content;
-}
-
 async function process(content, opts) {
 	const { embedHtml, embedImage, embedAudio, embedVideo } = await meta.settings.get('link-preview');
 	if (![embedHtml, embedImage, embedAudio, embedVideo].some(prop => prop === 'on')) {
 		return content;
 	}
 
+	const requests = new Map();
+
+	// Retrieve attachments
+	if (opts.hasOwnProperty('pid') && await posts.exists(opts.pid)) {
+		const hashes = await db.getSortedSetMembers(`post:${opts.pid}:attachments`);
+		const keys = hashes.map(hash => `attachment:${hash}`);
+		const attachments = (await db.getObjects(keys)).filter(Boolean);
+		const urls = attachments
+			// .filter(attachment => cache.has(`link-preview:${attachment.url}`))
+			.map(attachment => attachment.url);
+
+		urls.forEach(url => requests.set(url, {
+			type: 'attachment',
+		}));
+	}
+
+	// Parse inline urls
 	const $ = load(content, null, false);
 	for (const anchor of $('a')) {
 		const $anchor = $(anchor);
@@ -162,28 +127,72 @@ async function process(content, opts) {
 			continue;
 		}
 
+		requests.set(url, {
+			type: 'inline',
+			target: $anchor,
+		});
+	}
+
+	// Render cache hits immediately
+	let attachmentHtml = '';
+	const cold = new Set();
+	await Promise.all(Array.from(requests.keys()).map(async (url) => {
+		const options = requests.get(url);
 		const cached = cache.get(`link-preview:${url}`);
 		if (cached) {
 			const html = await render(cached);
 			if (html) {
-				$anchor.replaceWith($(html));
+				switch (options.type) {
+					case 'inline': {
+						const $anchor = options.target;
+						$anchor.replaceWith($(html));
+						break;
+					}
+
+					case 'attachment': {
+						attachmentHtml += `<div class="col-6">${html}</div>`;
+						break;
+					}
+				}
 			}
-			continue;
+		} else {
+			cold.add(url);
 		}
+	}));
 
-		// Generate the preview, but continue for now so as to not block response
-		preview(url).then(async (preview) => {
-			if (!preview) {
-				return;
-			}
+	// Start preview for cache misses, but continue for now so as to not block response
+	if (cold.size) {
+		const coldArr = Array.from(cold);
+		Promise.all(coldArr.map(preview)).then(async (previews) => {
+			await Promise.all(previews.map(async (preview, idx) => {
+				if (!preview) {
+					return;
+				}
 
-			const parsedUrl = new URL(url);
-			preview.hostname = parsedUrl.hostname;
+				const url = coldArr[idx];
+				const options = requests.get(url);
+				const parsedUrl = new URL(url);
+				preview.hostname = parsedUrl.hostname;
 
-			const html = await render(preview);
-			if (!html) {
-				return;
-			}
+				const html = await render(preview);
+				if (html) {
+					switch (options.type) {
+						case 'inline': {
+							const $anchor = options.target;
+							$anchor.replaceWith($(html));
+							break;
+						}
+
+						case 'attachment': {
+							attachmentHtml += `<div class="col-6">${html}</div>`;
+							break;
+						}
+					}
+				}
+			}));
+
+			let content = $.html();
+			content += attachmentHtml ? `\n\n<div class="row">${attachmentHtml}</div>` : '';
 
 			// bust posts cache item
 			if (opts.hasOwnProperty('pid') && await posts.exists(opts.pid)) {
@@ -191,13 +200,12 @@ async function process(content, opts) {
 
 				// fire post edit event with mocked data
 				if (opts.hasOwnProperty('tid') && await topics.exists(opts.tid)) {
-					$anchor.replaceWith($(html));
 					websockets.in(`topic_${opts.tid}`).emit('event:post_edited', {
 						post: {
 							tid: opts.tid,
 							pid: opts.pid,
 							changed: true,
-							content: $.html(),
+							content,
 						},
 						topic: {},
 					});
@@ -206,7 +214,9 @@ async function process(content, opts) {
 		});
 	}
 
-	return $.html();
+	content = $.html();
+	content += attachmentHtml ? `\n\n<div class="row">${attachmentHtml}</div>` : '';
+	return content;
 }
 
 async function render(preview) {
@@ -285,8 +295,7 @@ plugin.onParse = async (payload) => {
 	if (typeof payload === 'string') { // raw
 		payload = await process(payload, {});
 	} else if (payload && payload.postData && payload.postData.content) { // post
-		let { content, pid, tid } = payload.postData;
-		content = await processAttachments({ content, pid, tid });
+		const { content, pid, tid } = payload.postData;
 		payload.postData.content = await process(content, { pid, tid });
 	}
 
