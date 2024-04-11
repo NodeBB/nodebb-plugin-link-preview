@@ -31,7 +31,7 @@
   },
   "readmeFilename": "README.md",
   "nbbpm": {
-    "compatibility": "^3.2.0"
+    "compatibility": "^4.0.0"
   },
   "devDependencies": {
     "@commitlint/cli": "17.6.5",
@@ -44,6 +44,7 @@
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
-    "link-preview-js": "^3.0.4"
+    "link-preview-js": "^3.0.4",
+    "validator": "^13.11.0"
   }
 }

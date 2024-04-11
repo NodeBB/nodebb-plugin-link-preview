@@ -9,8 +9,8 @@ const dns = require('dns');
 
 const { getLinkPreview } = require('link-preview-js');
 const { load } = require('cheerio');
+const { isURL } = require('validator');
 
-const db = require.main.require('./src/database');
 const meta = require.main.require('./src/meta');
 const cache = require.main.require('./src/cache');
 const posts = require.main.require('./src/posts');
@@ -92,16 +92,11 @@ async function process(content, opts) {
 
 	// Retrieve attachments
 	if (opts.hasOwnProperty('pid') && await posts.exists(opts.pid)) {
-		const hashes = await db.getSortedSetMembers(`post:${opts.pid}:attachments`);
-		const keys = hashes.map(hash => `attachment:${hash}`);
-		const attachments = (await db.getObjects(keys)).filter(Boolean);
-		const urls = attachments
-			// .filter(attachment => cache.has(`link-preview:${attachment.url}`))
-			.map(attachment => attachment.url);
-
-		urls.forEach(url => requests.set(url, {
-			type: 'attachment',
-		}));
+		const attachments = await posts.attachments.get(opts.pid);
+		attachments.forEach(({ url, _type }) => {
+			const type = _type || 'attachment';
+			requests.set(url, { type });
+		});
 	}
 
 	// Parse inline urls
@@ -127,6 +122,7 @@ async function process(content, opts) {
 			continue;
 		}
 
+		// Inline url takes precedence over attachment
 		requests.set(url, {
 			type: 'inline',
 			target: $anchor,
@@ -300,6 +296,25 @@ plugin.onParse = async (payload) => {
 	}
 
 	return payload;
+};
+
+plugin.onPost = async ({ post }) => {
+	if (post._activitypub) {
+		return; // no attachment parsing for content from activitypub; attachments saved via notes.assert
+	}
+
+	// Only match standalone URLs on their own line
+	const lines = post.content.split('\n');
+	const urls = lines.filter(line => isURL(line));
+
+	let previews = await Promise.all(urls.map(async url => await preview(url)));
+	previews = previews.map(({ url, contentType: mediaType }) => ({
+		type: 'inline',
+		url,
+		mediaType,
+	})).filter(Boolean);
+
+	posts.attachments.update(post.pid, previews);
 };
 
 plugin.addAdminNavigation = (header) => {
