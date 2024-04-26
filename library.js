@@ -308,6 +308,7 @@ plugin.onPost = async ({ post }) => {
 	const urls = lines.filter(line => isURL(line));
 
 	let previews = await Promise.all(urls.map(async url => await preview(url)));
+	previews = previews.filter(Boolean);
 	previews = previews.map(({ url, contentType: mediaType }) => ({
 		type: 'inline',
 		url,
