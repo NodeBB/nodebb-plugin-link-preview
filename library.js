@@ -146,7 +146,7 @@ async function process(content, opts) {
 					}
 
 					case 'attachment': {
-						attachmentHtml += `<div class="col-lg-6">${html}</div>`;
+						attachmentHtml += html;
 						break;
 					}
 				}
@@ -180,7 +180,7 @@ async function process(content, opts) {
 						}
 
 						case 'attachment': {
-							attachmentHtml += `<div class="col-lg-6">${html}</div>`;
+							attachmentHtml += html;
 							break;
 						}
 					}
@@ -211,7 +211,7 @@ async function process(content, opts) {
 	}
 
 	content = $.html();
-	content += attachmentHtml ? `\n\n<div class="row">${attachmentHtml}</div>` : '';
+	content += attachmentHtml ? `\n\n<div class="row"><div class="col-12">${attachmentHtml}</div></div>` : '';
 	return content;
 }
 
