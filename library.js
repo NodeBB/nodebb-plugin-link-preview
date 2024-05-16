@@ -180,7 +180,7 @@ async function process(content, opts) {
 						}
 
 						case 'attachment': {
-							attachmentHtml += `<div class="col-6">${html}</div>`;
+							attachmentHtml += `<div class="col-lg-6">${html}</div>`;
 							break;
 						}
 					}
