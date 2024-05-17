@@ -82,7 +82,9 @@ async function preview(url) {
 	});
 }
 
-async function process(content, opts) {
+async function process(content, { type, pid, tid }) {
+	const inlineTypes = ['default', 'activitypub.article'];
+	const processInline = inlineTypes.includes(type);
 	const { embedHtml, embedImage, embedAudio, embedVideo } = await meta.settings.get('link-preview');
 	if (![embedHtml, embedImage, embedAudio, embedVideo].some(prop => prop === 'on')) {
 		return content;
@@ -91,8 +93,8 @@ async function process(content, opts) {
 	const requests = new Map();
 
 	// Retrieve attachments
-	if (opts.hasOwnProperty('pid') && await posts.exists(opts.pid)) {
-		const attachments = await posts.attachments.get(opts.pid);
+	if (pid && await posts.exists(pid)) {
+		const attachments = await posts.attachments.get(pid);
 		attachments.forEach(({ url, _type }) => {
 			const type = _type || 'attachment';
 			requests.set(url, { type });
@@ -117,9 +119,11 @@ async function process(content, opts) {
 			url = `${nconf.get('url')}${url.startsWith('/') ? url : `/${url}`}`;
 		}
 
-		const special = await handleSpecialEmbed(url, $anchor);
-		if (special) {
-			continue;
+		if (!processInline) {
+			const special = await handleSpecialEmbed(url, $anchor);
+			if (special) {
+				continue;
+			}
 		}
 
 		// Inline url takes precedence over attachment
@@ -140,8 +144,10 @@ async function process(content, opts) {
 			if (html) {
 				switch (options.type) {
 					case 'inline': {
-						const $anchor = options.target;
-						$anchor.replaceWith($(html));
+						if (processInline) {
+							const $anchor = options.target;
+							$anchor.replaceWith($(html));
+						}
 						break;
 					}
 
@@ -174,8 +180,10 @@ async function process(content, opts) {
 				if (html) {
 					switch (options.type) {
 						case 'inline': {
-							const $anchor = options.target;
-							$anchor.replaceWith($(html));
+							if (processInline) {
+								const $anchor = options.target;
+								$anchor.replaceWith($(html));
+							}
 							break;
 						}
 
@@ -191,15 +199,15 @@ async function process(content, opts) {
 			content += attachmentHtml ? `\n\n<div class="row">${attachmentHtml}</div>` : '';
 
 			// bust posts cache item
-			if (opts.hasOwnProperty('pid') && await posts.exists(opts.pid)) {
-				postsCache.del(String(opts.pid));
+			if (pid && await posts.exists(pid)) {
+				posts.clearCachedPost(pid);
 
 				// fire post edit event with mocked data
-				if (opts.hasOwnProperty('tid') && await topics.exists(opts.tid)) {
-					websockets.in(`topic_${opts.tid}`).emit('event:post_edited', {
+				if (tid && await topics.exists(tid)) {
+					websockets.in(`topic_${tid}`).emit('event:post_edited', {
 						post: {
-							tid: opts.tid,
-							pid: opts.pid,
+							tid,
+							pid,
 							changed: true,
 							content,
 						},
@@ -289,10 +297,12 @@ async function handleSpecialEmbed(url, $anchor) {
 
 plugin.onParse = async (payload) => {
 	if (typeof payload === 'string') { // raw
-		payload = await process(payload, {});
+		const type = 'default';
+		payload = await process(payload, { type });
 	} else if (payload && payload.postData && payload.postData.content) { // post
 		const { content, pid, tid } = payload.postData;
-		payload.postData.content = await process(content, { pid, tid });
+		const { type } = payload;
+		payload.postData.content = await process(content, { type, pid, tid });
 	}
 
 	return payload;
