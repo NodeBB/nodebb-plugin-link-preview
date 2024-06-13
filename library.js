@@ -14,9 +14,7 @@ const { isURL } = require('validator');
 const meta = require.main.require('./src/meta');
 const cache = require.main.require('./src/cache');
 const posts = require.main.require('./src/posts');
-const topics = require.main.require('./src/topics');
 const websockets = require.main.require('./src/socket.io');
-const postsCache = require.main.require('./src/posts/cache');
 
 const controllers = require('./lib/controllers');
 
@@ -82,7 +80,7 @@ async function preview(url) {
 	});
 }
 
-async function process(content, { type, pid, tid }) {
+async function process(content, { type, pid, tid, attachments }) {
 	const inlineTypes = ['default', 'activitypub.article'];
 	const processInline = inlineTypes.includes(type);
 	const { embedHtml, embedImage, embedAudio, embedVideo } = await meta.settings.get('link-preview');
@@ -91,11 +89,9 @@ async function process(content, { type, pid, tid }) {
 	}
 
 	const requests = new Map();
-
-	// Retrieve attachments
-	if (pid && await posts.exists(pid)) {
-		const attachments = await posts.attachments.get(pid);
-		attachments.forEach(({ url, _type }) => {
+	if (pid && Array.isArray(attachments) && attachments.length) {
+		const attachmentData = await posts.attachments.getAttachments(attachments);
+		attachmentData.filter(Boolean).forEach(({ url, _type }) => {
 			const type = _type || 'attachment';
 			requests.set(url, { type });
 		});
@@ -199,11 +195,11 @@ async function process(content, { type, pid, tid }) {
 			content += attachmentHtml ? `\n\n<div class="row">${attachmentHtml}</div>` : '';
 
 			// bust posts cache item
-			if (pid && await posts.exists(pid)) {
+			if (pid) {
 				posts.clearCachedPost(pid);
 
 				// fire post edit event with mocked data
-				if (tid && await topics.exists(tid)) {
+				if (tid) {
 					websockets.in(`topic_${tid}`).emit('event:post_edited', {
 						post: {
 							tid,
@@ -300,9 +296,9 @@ plugin.onParse = async (payload) => {
 		const type = 'default';
 		payload = await process(payload, { type });
 	} else if (payload && payload.postData && payload.postData.content) { // post
-		const { content, pid, tid } = payload.postData;
+		const { content, pid, tid, attachments } = payload.postData;
 		const { type } = payload;
-		payload.postData.content = await process(content, { type, pid, tid });
+		payload.postData.content = await process(content, { type, pid, tid, attachments });
 	}
 
 	return payload;
