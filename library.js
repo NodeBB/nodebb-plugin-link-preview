@@ -115,7 +115,7 @@ async function process(content, { type, pid, tid, attachments }) {
 			url = `${nconf.get('url')}${url.startsWith('/') ? url : `/${url}`}`;
 		}
 
-		if (!processInline) {
+		if (processInline) {
 			const special = await handleSpecialEmbed(url, $anchor);
 			if (special) {
 				continue;
