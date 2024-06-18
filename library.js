@@ -118,6 +118,7 @@ async function process(content, { type, pid, tid, attachments }) {
 		if (processInline) {
 			const special = await handleSpecialEmbed(url, $anchor);
 			if (special) {
+				requests.delete(url);
 				continue;
 			}
 		}
