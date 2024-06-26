@@ -1,6 +1,6 @@
 {
   "name": "nodebb-plugin-link-preview",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "A starter kit for quickly creating NodeBB plugins",
   "main": "library.js",
   "repository": {
