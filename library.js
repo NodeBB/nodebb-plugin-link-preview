@@ -70,12 +70,12 @@ async function preview(url) {
 			return false;
 		},
 	}).then((preview) => {
-		winston.verbose(`[link-preview] ${preview.url} (${preview.contentType}, cache: miss)`);
+		// winston.verbose(`[link-preview] ${preview.url} (${preview.contentType}, cache: miss)`);
 		cache.set(`link-preview:${url}`, preview);
 
 		return preview;
 	}).catch(() => {
-		winston.verbose(`[link-preview] ${url} (invalid, cache: miss)`);
+		// winston.verbose(`[link-preview] ${url} (invalid, cache: miss)`);
 		cache.set(`link-preview:${url}`, { url });
 	});
 }
@@ -224,7 +224,7 @@ async function render(preview) {
 	const { app } = require.main.require('./src/webserver');
 	const { embedHtml, embedImage, embedAudio, embedVideo } = await meta.settings.get('link-preview');
 
-	winston.verbose(`[link-preview] ${preview.url} (${preview.contentType || 'invalid'}, cache: hit)`);
+	// winston.verbose(`[link-preview] ${preview.url} (${preview.contentType || 'invalid'}, cache: hit)`);
 
 	if (!preview.contentType) {
 		return false;
