@@ -132,6 +132,7 @@ async function process(content, { type, pid, tid, attachments }) {
 
 	// Render cache hits immediately
 	let attachmentHtml = '';
+	let placeholderHtml = '';
 	const cold = new Set();
 	await Promise.all(Array.from(requests.keys()).map(async (url) => {
 		const options = requests.get(url);
@@ -155,6 +156,9 @@ async function process(content, { type, pid, tid, attachments }) {
 				}
 			}
 		} else {
+			if (options.type === 'attachment') {
+				placeholderHtml += `<p><a href="${url}" rel="nofollow ugc">${url}</a></p>`;
+			}
 			cold.add(url);
 		}
 	}));
@@ -217,6 +221,7 @@ async function process(content, { type, pid, tid, attachments }) {
 
 	content = $.html();
 	content += attachmentHtml ? `\n\n<div class="row"><div class="col-12">${attachmentHtml}</div></div>` : '';
+	content += placeholderHtml ? `\n\n<div class="row"><div class="col-12">${placeholderHtml}</div></div>` : '';
 	return content;
 }
 
