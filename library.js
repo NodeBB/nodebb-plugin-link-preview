@@ -301,7 +301,7 @@ plugin.onParse = async (payload) => {
 	if (typeof payload === 'string') { // raw
 		const type = 'default';
 		payload = await process(payload, { type });
-	} else if (payload && payload.postData && payload.postData.content) { // post
+	} else if (payload && payload.type !== 'plaintext' && payload.postData && payload.postData.content) { // post
 		const { content, pid, tid, attachments } = payload.postData;
 		const { type } = payload;
 		payload.postData.content = await process(content, { type, pid, tid, attachments });
