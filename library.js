@@ -311,7 +311,7 @@ plugin.onParse = async (payload) => {
 };
 
 plugin.onPost = async ({ post }) => {
-	if (post._activitypub) {
+	if (post.hasOwnProperty('_activitypub')) {
 		return; // no attachment parsing for content from activitypub; attachments saved via notes.assert
 	}
 
