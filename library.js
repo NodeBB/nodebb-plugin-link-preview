@@ -14,6 +14,7 @@ const { isURL } = require('validator');
 const meta = require.main.require('./src/meta');
 const cache = require.main.require('./src/cache');
 const posts = require.main.require('./src/posts');
+const postsCache = require.main.require('./src/posts/cache');
 const websockets = require.main.require('./src/socket.io');
 
 const controllers = require('./lib/controllers');
@@ -201,7 +202,9 @@ async function process(content, { type, pid, tid, attachments }) {
 
 			// bust posts cache item
 			if (pid) {
-				posts.clearCachedPost(pid);
+				const cache = postsCache.getOrCreate();
+				const cacheKey = `${String(pid)}|default`;
+				cache.set(cacheKey, content);
 
 				// fire post edit event with mocked data
 				if (tid) {
