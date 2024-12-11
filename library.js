@@ -203,11 +203,11 @@ async function process(content, { type, pid, tid, attachments }) {
 			// bust posts cache item
 			if (pid) {
 				const cache = postsCache.getOrCreate();
-				const cacheKey = `${String(pid)}|default`;
+				const cacheKey = `${String(pid)}|${type}`;
 				cache.set(cacheKey, content);
 
 				// fire post edit event with mocked data
-				if (tid) {
+				if (type === 'default' && tid) {
 					websockets.in(`topic_${tid}`).emit('event:post_edited', {
 						post: {
 							tid,
