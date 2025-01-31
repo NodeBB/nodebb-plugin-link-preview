@@ -108,7 +108,7 @@ async function process(content, { type, pid, tid, attachments }) {
 
 		// Skip if the anchor has link text, or has text on the same line.
 		let url = $anchor.attr('href');
-		url = decodeURI(url);
+		url = decodeURI(url); 
 		const text = $anchor.text();
 		const hasSiblings = !!anchor.prev || !!anchor.next;
 		if (hasSiblings || url !== text || anchor.parent.name !== 'p') {
