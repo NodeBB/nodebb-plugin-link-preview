@@ -93,8 +93,11 @@ async function process(content, { type, pid, tid, attachments }) {
 	if (pid && Array.isArray(attachments) && attachments.length) {
 		const attachmentData = await posts.attachments.getAttachments(attachments);
 		attachmentData.filter(Boolean).forEach(({ url, _type }) => {
-			const type = _type || 'attachment';
-			requests.set(url, { type });
+			const isInlineImage = new RegExp(`<img.+?src="${url}".+?>`).test(content);
+			if (!isInlineImage) {
+				const type = _type || 'attachment';
+				requests.set(url, { type });
+			}
 		});
 	}
 
