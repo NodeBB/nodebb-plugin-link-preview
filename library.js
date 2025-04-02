@@ -90,16 +90,8 @@ async function process(content, { type, pid, tid, attachments }) {
 	}
 
 	const requests = new Map();
-	if (pid && Array.isArray(attachments) && attachments.length) {
-		const attachmentData = await posts.attachments.getAttachments(attachments);
-		attachmentData.filter(Boolean).forEach(({ url, _type }) => {
-			const isInlineImage = new RegExp(`<img.+?src="${url}".+?>`).test(content);
-			if (!isInlineImage) {
-				const type = _type || 'attachment';
-				requests.set(url, { type });
-			}
-		});
-	}
+	let attachmentHtml = '';
+	let placeholderHtml = '';
 
 	// Parse inline urls
 	const $ = load(content, null, false);
@@ -108,7 +100,7 @@ async function process(content, { type, pid, tid, attachments }) {
 
 		// Skip if the anchor has link text, or has text on the same line.
 		let url = $anchor.attr('href');
-		url = decodeURI(url); 
+		url = decodeURI(url);
 		const text = $anchor.text();
 		const hasSiblings = !!anchor.prev || !!anchor.next;
 		if (hasSiblings || url !== text || anchor.parent.name !== 'p') {
@@ -135,9 +127,27 @@ async function process(content, { type, pid, tid, attachments }) {
 		});
 	}
 
+	// Post attachments
+	if (pid && Array.isArray(attachments) && attachments.length) {
+		const attachmentData = await posts.attachments.getAttachments(attachments);
+		await Promise.all(attachmentData.filter(Boolean).map(async ({ url, _type }) => {
+			const isInlineImage = new RegExp(`<img.+?src="${url}".+?>`).test(content);
+			if (isInlineImage) {
+				return;
+			}
+
+			const special = await handleSpecialEmbed(url);
+			if (special) {
+				attachmentHtml += special;
+				return;
+			}
+
+			const type = _type || 'attachment';
+			requests.set(url, { type });
+		}));
+	}
+
 	// Render cache hits immediately
-	let attachmentHtml = '';
-	let placeholderHtml = '';
 	const cold = new Set();
 	await Promise.all(Array.from(requests.keys()).map(async (url) => {
 		const options = requests.get(url);
@@ -280,25 +290,37 @@ async function handleSpecialEmbed(url, $anchor) {
 			video = searchParams.get('v');
 		}
 		const html = await app.renderAsync(short ? 'partials/link-preview/youtube-short' : 'partials/link-preview/youtube', { video });
-		$anchor.replaceWith(html);
 
-		return true;
+		if ($anchor) {
+			$anchor.replaceWith(html);
+			return true;
+		}
+
+		return html;
 	}
 
 	if (embedVimeo === 'on' && hostname === 'vimeo.com') {
 		const video = pathname.slice(1);
 		const html = await app.renderAsync('partials/link-preview/vimeo', { video });
-		$anchor.replaceWith(html);
 
-		return true;
+		if ($anchor) {
+			$anchor.replaceWith(html);
+			return true;
+		}
+
+		return html;
 	}
 
 	if (embedTiktok === 'on' && ['tiktok.com', 'www.tiktok.com'].some(x => hostname === x)) {
 		const video = pathname.split('/')[3];
 		const html = await app.renderAsync('partials/link-preview/tiktok', { video });
-		$anchor.replaceWith(html);
 
-		return true;
+		if ($anchor) {
+			$anchor.replaceWith(html);
+			return true;
+		}
+
+		return html;
 	}
 
 	return false;
