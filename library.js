@@ -130,7 +130,8 @@ async function process(content, { type, pid, tid, attachments }) {
 	// Post attachments
 	if (pid && Array.isArray(attachments) && attachments.length) {
 		const attachmentData = await posts.attachments.getAttachments(attachments);
-		await Promise.all(attachmentData.filter(Boolean).map(async ({ url, _type }) => {
+		await Promise.all(attachmentData.filter(Boolean).map(async (attachment) => {
+			const { url, _type } = attachment;
 			const isInlineImage = new RegExp(`<img.+?src="${url}".+?>`).test(content);
 			if (isInlineImage) {
 				return;
@@ -140,6 +141,14 @@ async function process(content, { type, pid, tid, attachments }) {
 			if (special) {
 				attachmentHtml += special;
 				return;
+			}
+
+			if (attachment.hasOwnProperty('mediaType') && attachment.mediaType.startsWith('video/')) { // ActivityPub
+				cache.set(`link-preview:${url}`, {
+					...attachment,
+					contentType: attachment.mediaType,
+					mediaType: 'video',
+				});
 			}
 
 			const type = _type || 'attachment';
@@ -237,8 +246,8 @@ async function process(content, { type, pid, tid, attachments }) {
 	}
 
 	content = $.html();
-	content += attachmentHtml ? `\n\n<div class="row"><div class="col-12">${attachmentHtml}</div></div>` : '';
-	content += placeholderHtml ? `\n\n<div class="row"><div class="col-12">${placeholderHtml}</div></div>` : '';
+	content += attachmentHtml ? `\n\n<div class="row"><div class="col-12 mt-3">${attachmentHtml}</div></div>` : '';
+	content += placeholderHtml ? `\n\n<div class="row"><div class="col-12 mt-3">${placeholderHtml}</div></div>` : '';
 	return content;
 }
 
