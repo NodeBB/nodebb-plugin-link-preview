@@ -143,12 +143,27 @@ async function process(content, { type, pid, tid, attachments }) {
 				return;
 			}
 
-			if (attachment.hasOwnProperty('mediaType') && attachment.mediaType.startsWith('video/')) { // ActivityPub
-				cache.set(`link-preview:${url}`, {
-					...attachment,
-					contentType: attachment.mediaType,
-					mediaType: 'video',
-				});
+			// ActivityPub attachments
+			if (attachment.hasOwnProperty('mediaType')) {
+				switch (true) {
+					case attachment.mediaType.startsWith('video/'): {
+						cache.set(`link-preview:${url}`, {
+							...attachment,
+							contentType: attachment.mediaType,
+							mediaType: 'video',
+						});
+						break;
+					}
+
+					case attachment.mediaType.startsWith('image/'): {
+						cache.set(`link-preview:${url}`, {
+							...attachment,
+							contentType: attachment.mediaType,
+							mediaType: 'image',
+						});
+						break;
+					}
+				}
 			}
 
 			const type = _type || 'attachment';
