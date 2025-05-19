@@ -144,7 +144,7 @@ async function process(content, { type, pid, tid, attachments }) {
 			}
 
 			// ActivityPub attachments
-			if (attachment.hasOwnProperty('mediaType')) {
+			if (attachment.hasOwnProperty('mediaType') && attachment.mediaType) {
 				switch (true) {
 					case attachment.mediaType.startsWith('video/'): {
 						cache.set(`link-preview:${url}`, {
