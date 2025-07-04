@@ -9,7 +9,8 @@
 		{ "hook": "filter:parse.post", "method": "onParse" },
 		{ "hook": "filter:parse.raw", "method": "onParse" },
 		{ "hook": "action:post.save", "method": "onPost" },
-		{ "hook": "action:post.edit", "method": "onPost" }
+		{ "hook": "action:post.edit", "method": "onPost" },
+		{ "hook": "filter:admin.cache.get", "method": "filterAdminCacheGet" }
 	],
 	"scss": [
 		"static/scss/link-preview.scss"

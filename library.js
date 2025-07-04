@@ -3,7 +3,6 @@
 
 'use strict';
 
-const winston = require.main.require('winston');
 const nconf = require.main.require('nconf');
 const dns = require('dns');
 
@@ -12,7 +11,12 @@ const { load } = require('cheerio');
 const { isURL } = require('validator');
 
 const meta = require.main.require('./src/meta');
-const cache = require.main.require('./src/cache');
+const cacheCreate = require.main.require('./src/cacheCreate');
+const cache = cacheCreate({
+	name: 'link-preview',
+	max: 10000,
+	ttl: 0,
+});
 const posts = require.main.require('./src/posts');
 const postsCache = require.main.require('./src/posts/cache');
 const websockets = require.main.require('./src/socket.io');
@@ -21,7 +25,7 @@ const controllers = require('./lib/controllers');
 
 const routeHelpers = require.main.require('./src/routes/helpers');
 
-const plugin = {};
+const plugin = module.exports;
 
 plugin.init = async (params) => {
 	const { router /* , middleware , controllers */ } = params;
@@ -393,4 +397,8 @@ plugin.addAdminNavigation = (header) => {
 	return header;
 };
 
-module.exports = plugin;
+plugin.filterAdminCacheGet = function (caches) {
+	caches['link-preview'] = cache;
+	return caches;
+};
+
