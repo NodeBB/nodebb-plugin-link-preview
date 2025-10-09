@@ -240,7 +240,7 @@ async function process(content, { type, pid, tid, attachments }) {
 			}));
 
 			let content = $.html();
-			content += attachmentHtml ? `\n\n<div class="row">${attachmentHtml}</div>` : '';
+			content += attachmentHtml ? `\n\n<div class="row mt-3">${attachmentHtml}</div>` : '';
 
 			// bust posts cache item
 			if (pid) {
@@ -265,8 +265,8 @@ async function process(content, { type, pid, tid, attachments }) {
 	}
 
 	content = $.html();
-	content += attachmentHtml ? `\n\n<div class="row"><div class="col-12 mt-3">${attachmentHtml}</div></div>` : '';
-	content += placeholderHtml ? `\n\n<div class="row"><div class="col-12 mt-3">${placeholderHtml}</div></div>` : '';
+	content += attachmentHtml ? `\n\n<div class="row mt-3"><div class="col-12 mt-3">${attachmentHtml}</div></div>` : '';
+	content += placeholderHtml ? `\n\n<div class="row mt-3"><div class="col-12 mt-3">${placeholderHtml}</div></div>` : '';
 	return content;
 }
 

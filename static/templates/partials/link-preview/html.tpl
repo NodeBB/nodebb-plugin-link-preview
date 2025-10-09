@@ -1,4 +1,4 @@
-<div class="card col-md-9 col-lg-6 position-relative link-preview">
+<div class="card col-md-9 col-lg-6 position-relative link-preview p-0">
 	{{{ if images.length }}}
 	{{{ each images }}}
 	{{{ if @first }}}
