@@ -7,7 +7,6 @@ const nconf = require.main.require('nconf');
 const dns = require('dns');
 
 const { getLinkPreview } = require('link-preview-js');
-const { load } = require('cheerio');
 const { isURL } = require('validator');
 
 const meta = require.main.require('./src/meta');
@@ -96,30 +95,46 @@ async function process(content, { type, pid, tid, attachments }) {
 	const requests = new Map();
 	let attachmentHtml = '';
 	let placeholderHtml = '';
+	let hits = [];
 
 	// Parse inline urls
-	const $ = load(content, null, false);
-	for (const anchor of $('a')) {
-		const $anchor = $(anchor);
+	const anchorRegex = /<a [^>]+>.*?<\/a>/gi;
+	let match = anchorRegex.exec(content);
+	while (match !== null) {
+		const { index } = match;
+		const { length } = match[0];
+		const before = content.slice(Math.max(0, index - 20), index);
+		const after = content.slice(index + length, index + length + 20);
+		const wrapped = before.trim().endsWith('<p dir="auto">') || before.trim().endsWith('<p>');
+		const closed = after.trim().startsWith('</p>');
 
-		// Skip if the anchor has link text, or has text on the same line.
-		let url = $anchor.attr('href');
-		url = decodeURI(url);
-		const text = $anchor.text();
-		const hasSiblings = !!anchor.prev || !!anchor.next;
-		if (hasSiblings || url !== text || anchor.parent.name !== 'p') {
+		if (!wrapped || !closed) {
+			match = anchorRegex.exec(content);
 			continue;
 		}
 
-		// Handle relative URLs
-		if (!url.startsWith('http')) {
+		const urlMatch = match[0].match(/href=["'](.*?)["']/);
+		let url = urlMatch ? decodeURI(urlMatch[1]) : '';
+		const text = match[0].replace(/<[^>]+>/g, ''); // Strip tags to get text
+		if (url === text) {
+			match = anchorRegex.exec(content);
+			continue;
+		}
+
+		// Otherwise, process the anchor...
+
+		if (url.startsWith('//')) { // Handle protocol-relative URLs
+			url = `${nconf.get('url_parsed').protocol}${url}`;
+		} else if (!url.startsWith('http')) { // Handle relative URLs
 			url = `${nconf.get('url')}${url.startsWith('/') ? url : `/${url}`}`;
 		}
 
 		if (processInline) {
-			const special = await handleSpecialEmbed(url, $anchor);
-			if (special) {
+			const html = await handleSpecialEmbed(url);
+			if (html) {
 				requests.delete(url);
+				hits.push({ index, length, html });
+				match = anchorRegex.exec(content);
 				continue;
 			}
 		}
@@ -127,8 +142,11 @@ async function process(content, { type, pid, tid, attachments }) {
 		// Inline url takes precedence over attachment
 		requests.set(url, {
 			type: 'inline',
-			target: $anchor,
+			index,
+			length,
 		});
+
+		match = anchorRegex.exec(content);
 	}
 
 	// Post attachments
@@ -186,8 +204,8 @@ async function process(content, { type, pid, tid, attachments }) {
 				switch (options.type) {
 					case 'inline': {
 						if (processInline) {
-							const $anchor = options.target;
-							$anchor.replaceWith($(html));
+							const { index, length } = options;
+							hits.push({ index, length, html });
 						}
 						break;
 					}
@@ -210,6 +228,7 @@ async function process(content, { type, pid, tid, attachments }) {
 	if (cold.size) {
 		const coldArr = Array.from(cold);
 		const failures = new Set();
+		let successes = [];
 		Promise.all(coldArr.map(preview)).then(async (previews) => {
 			await Promise.all(previews.map(async (preview, idx) => {
 				if (!preview) {
@@ -226,8 +245,8 @@ async function process(content, { type, pid, tid, attachments }) {
 					switch (options.type) {
 						case 'inline': {
 							if (processInline) {
-								const $anchor = options.target;
-								$anchor.replaceWith($(html));
+								const { index, length } = options;
+								successes.push({ index, length, html });
 							}
 							break;
 						}
@@ -247,15 +266,23 @@ async function process(content, { type, pid, tid, attachments }) {
 				html += `<p><a href="${cur}" rel="nofollow ugc">${cur}</a></p>`;
 				return html;
 			}, '');
-			let content = $.html();
-			content += attachmentHtml ? `\n\n<div class="row mt-3">${attachmentHtml}</div>` : '';
-			content += placeholderHtml ? `\n\n<div class="row mt-3"><div class="col-12 mt-3">${placeholderHtml}</div></div>` : '';
+			let modified = content;
+
+			successes = successes.sort((a, b) => b.index - a.index);
+			successes.forEach(({ html, index, length }) => {
+				modified =
+					modified.slice(0, index) +
+					html +
+					modified.slice(index + length);
+			});
+			modified += attachmentHtml ? `\n\n<div class="row mt-3">${attachmentHtml}</div>` : '';
+			modified += placeholderHtml ? `\n\n<div class="row mt-3"><div class="col-12 mt-3">${placeholderHtml}</div></div>` : '';
 
 			// bust posts cache item
 			if (pid) {
 				const cache = postsCache.getOrCreate();
 				const cacheKey = `${String(pid)}|${type}`;
-				cache.set(cacheKey, content);
+				cache.set(cacheKey, modified);
 
 				// fire post edit event with mocked data
 				if (type === 'default' && tid) {
@@ -264,7 +291,7 @@ async function process(content, { type, pid, tid, attachments }) {
 							tid,
 							pid,
 							changed: true,
-							content,
+							content: modified,
 						},
 						topic: {},
 					});
@@ -273,10 +300,18 @@ async function process(content, { type, pid, tid, attachments }) {
 		});
 	}
 
-	content = $.html();
-	content += attachmentHtml ? `\n\n<div class="row mt-3"><div class="col-12 mt-3">${attachmentHtml}</div></div>` : '';
-	content += placeholderHtml ? `\n\n<div class="row mt-3"><div class="col-12 mt-3">${placeholderHtml}</div></div>` : '';
-	return content;
+	let modified = content;
+
+	hits = hits.sort((a, b) => b.index - a.index);
+	hits.forEach(({ html, index, length }) => {
+		modified =
+			modified.slice(0, index) +
+			html +
+			modified.slice(index + length);
+	});
+	modified += attachmentHtml ? `\n\n<div class="row mt-3"><div class="col-12 mt-3">${attachmentHtml}</div></div>` : '';
+	modified += placeholderHtml ? `\n\n<div class="row mt-3"><div class="col-12 mt-3">${placeholderHtml}</div></div>` : '';
+	return modified;
 }
 
 async function render(preview) {
@@ -308,7 +343,7 @@ async function render(preview) {
 	return false;
 }
 
-async function handleSpecialEmbed(url, $anchor) {
+async function handleSpecialEmbed(url) {
 	const { app } = require.main.require('./src/webserver');
 	const { hostname, searchParams, pathname } = new URL(url);
 	const { embedYoutube, embedVimeo, embedTiktok } = await meta.settings.get('link-preview');
@@ -327,12 +362,6 @@ async function handleSpecialEmbed(url, $anchor) {
 			video = searchParams.get('v');
 		}
 		const html = await app.renderAsync(short ? 'partials/link-preview/youtube-short' : 'partials/link-preview/youtube', { video });
-
-		if ($anchor) {
-			$anchor.replaceWith(html);
-			return true;
-		}
-
 		return html;
 	}
 
@@ -340,22 +369,12 @@ async function handleSpecialEmbed(url, $anchor) {
 		const video = pathname.slice(1);
 		const html = await app.renderAsync('partials/link-preview/vimeo', { video });
 
-		if ($anchor) {
-			$anchor.replaceWith(html);
-			return true;
-		}
-
 		return html;
 	}
 
 	if (embedTiktok === 'on' && ['tiktok.com', 'www.tiktok.com'].some(x => hostname === x)) {
 		const video = pathname.split('/')[3];
 		const html = await app.renderAsync('partials/link-preview/tiktok', { video });
-
-		if ($anchor) {
-			$anchor.replaceWith(html);
-			return true;
-		}
 
 		return html;
 	}
