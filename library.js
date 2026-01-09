@@ -209,6 +209,7 @@ async function process(content, { type, pid, tid, attachments }) {
 	// Start preview for cache misses, but continue for now so as to not block response
 	if (cold.size) {
 		const coldArr = Array.from(cold);
+		const failures = new Set();
 		Promise.all(coldArr.map(preview)).then(async (previews) => {
 			await Promise.all(previews.map(async (preview, idx) => {
 				if (!preview) {
@@ -236,11 +237,19 @@ async function process(content, { type, pid, tid, attachments }) {
 							break;
 						}
 					}
+				} else if (options.type === 'attachment') {
+					// Preview failed, put back in placeholders
+					failures.add(url);
 				}
 			}));
 
+			const placeholderHtml = Array.from(failures).reduce((html, cur) => {
+				html += `<p><a href="${cur}" rel="nofollow ugc">${cur}</a></p>`;
+				return html;
+			}, '');
 			let content = $.html();
 			content += attachmentHtml ? `\n\n<div class="row mt-3">${attachmentHtml}</div>` : '';
+			content += placeholderHtml ? `\n\n<div class="row mt-3"><div class="col-12 mt-3">${placeholderHtml}</div></div>` : '';
 
 			// bust posts cache item
 			if (pid) {
