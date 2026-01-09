@@ -116,7 +116,7 @@ async function process(content, { type, pid, tid, attachments }) {
 		const urlMatch = match[0].match(/href=["'](.*?)["']/);
 		let url = urlMatch ? decodeURI(urlMatch[1]) : '';
 		const text = match[0].replace(/<[^>]+>/g, ''); // Strip tags to get text
-		if (url === text) {
+		if (url !== text) {
 			match = anchorRegex.exec(content);
 			continue;
 		}
