@@ -20,7 +20,7 @@
 		{{{ if favicons.length }}}
 		{{{ each favicons }}}
 		{{{ if @first }}}
-		<img src="{@value}" alt="favicon" class="not-responsive" style="max-width: 21px; max-height: 21px;" />
+		<img src="{@value}" alt="favicon" class="not-responsive overflow-hiddden" style="max-width: 21px; max-height: 21px;" />
 		{{{ end }}}
 		{{{ end }}}
 		{{{ end }}}
