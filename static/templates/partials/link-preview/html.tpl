@@ -10,7 +10,7 @@
 	{{{ end }}}
 	<div class="card-body">
 		<h5 class="card-title">
-			<a href="{url}">
+			<a class="text-decoration-none" href="{url}">
 				{title}
 			</a>
 		</h5>
