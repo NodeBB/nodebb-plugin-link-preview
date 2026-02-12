@@ -1,7 +1,7 @@
 {
   "name": "nodebb-plugin-link-preview",
   "version": "2.2.3",
-  "description": "A starter kit for quickly creating NodeBB plugins",
+  "description": "This plugin adds in additional post parsing capability to NodeBB so that any external links are automatically expanded into an interactive box containing any available metadata (e.g. photo, title, description, etc.)",
   "main": "library.js",
   "repository": {
     "type": "git",
