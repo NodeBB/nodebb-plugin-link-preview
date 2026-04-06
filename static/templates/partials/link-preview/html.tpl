@@ -3,7 +3,7 @@
 	{{{ each images }}}
 	{{{ if @first }}}
 	<a href="{url}" title="{title}">
-		<img src="{@value}" class="card-img-top not-responsive" style="max-height: 15rem;" alt="Link Preview Image" />
+		<img src="{@value}" class="card-img-top not-responsive" style="max-height: 15rem;" alt="Link Preview Image" onerror="this.parentElement.remove()" />
 	</a>
 	{{{ end }}}
 	{{{ end }}}
@@ -20,7 +20,7 @@
 		{{{ if favicons.length }}}
 		{{{ each favicons }}}
 		{{{ if @first }}}
-		<img src="{@value}" alt="favicon" class="not-responsive overflow-hiddden" style="max-width: 21px; max-height: 21px;" />
+		<img src="{@value}" alt="favicon" class="not-responsive overflow-hiddden" style="max-width: 21px; max-height: 21px;" onerror="this.remove()"/>
 		{{{ end }}}
 		{{{ end }}}
 		{{{ end }}}
