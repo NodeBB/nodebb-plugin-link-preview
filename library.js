@@ -36,7 +36,7 @@ plugin.applyDefaults = async (data) => {
 	const { plugin, values } = data;
 
 	if (plugin === 'link-preview') {
-		['embedHtml', 'embedImage', 'embedAudio', 'embedVideo'].forEach((prop) => {
+		['embedHtml', 'embedImage', 'embedAudio', 'embedVideo', 'embedIframe'].forEach((prop) => {
 			if (!values.hasOwnProperty(prop)) {
 				values[prop] = 'on';
 			}
@@ -87,8 +87,8 @@ async function preview(url) {
 async function process(content, { type, pid, tid, attachments }) {
 	const inlineTypes = ['default', 'activitypub.article'];
 	const processInline = inlineTypes.includes(type);
-	const { embedHtml, embedImage, embedAudio, embedVideo } = await meta.settings.get('link-preview');
-	if (![embedHtml, embedImage, embedAudio, embedVideo].some(prop => prop === 'on')) {
+	const { embedHtml, embedImage, embedAudio, embedVideo, embedIframe } = await meta.settings.get('link-preview');
+	if (![embedHtml, embedImage, embedAudio, embedVideo, embedIframe].some(prop => prop === 'on')) {
 		return content;
 	}
 
@@ -182,6 +182,15 @@ async function process(content, { type, pid, tid, attachments }) {
 							...attachment,
 							contentType: attachment.mediaType,
 							mediaType: 'image',
+						});
+						break;
+					}
+
+					case attachment.mediaType === 'text/plain': {
+						cache.set(`link-preview:${url}`, {
+							...attachment,
+							contentType: attachment.mediaType,
+							mediaType: 'iframe',
 						});
 						break;
 					}
@@ -316,7 +325,7 @@ async function process(content, { type, pid, tid, attachments }) {
 
 async function render(preview) {
 	const { app } = require.main.require('./src/webserver');
-	const { embedHtml, embedImage, embedAudio, embedVideo } = await meta.settings.get('link-preview');
+	const { embedHtml, embedImage, embedAudio, embedVideo, embedIframe } = await meta.settings.get('link-preview');
 
 	// winston.verbose(`[link-preview] ${preview.url} (${preview.contentType || 'invalid'}, cache: hit)`);
 
@@ -338,6 +347,10 @@ async function render(preview) {
 
 	if (embedVideo && preview.contentType.startsWith('video/')) {
 		return await app.renderAsync('partials/link-preview/video', preview);
+	}
+
+	if (embedIframe && preview.contentType === 'text/plain' && preview.mediaType === 'iframe') {
+		return await app.renderAsync('partials/link-preview/iframe', preview);
 	}
 
 	return false;

@@ -22,6 +22,11 @@
 					</div>
 
 					<div class="form-check form-switch mb-3">
+						<input type="checkbox" class="form-check-input" id="embedIframe" name="embedIframe">
+						<label for="embedIframe" class="form-check-label">Iframe</label>
+					</div>
+
+					<div class="form-check form-switch mb-3">
 						<input type="checkbox" class="form-check-input" id="embedAudio" name="embedAudio">
 						<label for="embedAudio" class="form-check-label">Audio</label>
 					</div>
