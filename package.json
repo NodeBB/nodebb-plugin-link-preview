@@ -43,7 +43,7 @@
     "lint-staged": "13.2.2"
   },
   "dependencies": {
-    "link-preview-js": "^3.0.4",
+    "link-preview-js": "^4.0.0",
     "validator": "^13.11.0"
   }
 }
