@@ -20,7 +20,7 @@
 
 const assert = require('assert');
 
-const db = require.main.require('./test/mocks/databasemock');
+const db = nodebb.require('./test/mocks/databasemock');
 
 describe('nodebb-plugin-link-preview', () => {
 	before(() => {

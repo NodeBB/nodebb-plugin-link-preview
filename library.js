@@ -1,28 +1,24 @@
-/* eslint-disable no-await-in-loop */
-/* eslint-disable no-continue */
 
 'use strict';
 
-const nconf = require.main.require('nconf');
 const dns = require('dns');
-
 const { getLinkPreview } = require('link-preview-js');
 const { isURL } = require('validator');
 
-const meta = require.main.require('./src/meta');
-const cacheCreate = require.main.require('./src/cacheCreate');
+const nconf = nodebb.require('nconf');
+const meta = nodebb.require('./src/meta');
+const cacheCreate = nodebb.require('./src/cacheCreate');
 const cache = cacheCreate({
 	name: 'link-preview',
 	max: 10000,
 	ttl: 0,
 });
-const posts = require.main.require('./src/posts');
-const postsCache = require.main.require('./src/posts/cache');
-const websockets = require.main.require('./src/socket.io');
+const posts = nodebb.require('./src/posts');
+const postsCache = nodebb.require('./src/posts/cache');
+const websockets = nodebb.require('./src/socket.io');
+const routeHelpers = nodebb.require('./src/routes/helpers');
 
 const controllers = require('./lib/controllers');
-
-const routeHelpers = require.main.require('./src/routes/helpers');
 
 const plugin = module.exports;
 
@@ -130,6 +126,7 @@ async function process(content, { type, pid, tid, attachments }) {
 		}
 
 		if (processInline) {
+			// eslint-disable-next-line no-await-in-loop
 			const html = await handleSpecialEmbed(url);
 			if (html) {
 				requests.delete(url);
@@ -324,7 +321,7 @@ async function process(content, { type, pid, tid, attachments }) {
 }
 
 async function render(preview) {
-	const { app } = require.main.require('./src/webserver');
+	const { app } = nodebb.require('./src/webserver');
 	const { embedHtml, embedImage, embedAudio, embedVideo, embedIframe } = await meta.settings.get('link-preview');
 
 	// winston.verbose(`[link-preview] ${preview.url} (${preview.contentType || 'invalid'}, cache: hit)`);
@@ -357,7 +354,7 @@ async function render(preview) {
 }
 
 async function handleSpecialEmbed(url) {
-	const { app } = require.main.require('./src/webserver');
+	const { app } = nodebb.require('./src/webserver');
 	const { hostname, searchParams, pathname } = new URL(url);
 	const { embedYoutube, embedVimeo, embedTiktok } = await meta.settings.get('link-preview');
 

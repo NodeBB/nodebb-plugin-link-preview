@@ -1,7 +1,7 @@
 'use strict';
 
 define('admin/plugins/link-preview', ['settings'], function (settings) {
-	var ACP = {};
+	const ACP = {};
 
 	ACP.init = function () {
 		settings.load('link-preview', $('.link-preview-settings'));
