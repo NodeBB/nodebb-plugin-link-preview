@@ -45,7 +45,7 @@
     "lint-staged": "17.0.8"
   },
   "dependencies": {
-    "link-preview-js": "^4.0.3",
+    "link-preview-js": "^5.0.0",
     "validator": "^13.11.0"
   }
 }
