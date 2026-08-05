@@ -2,7 +2,7 @@
 	{{{ if images.length }}}
 	{{{ each images }}}
 	{{{ if @first }}}
-	<a href="{url}" title="{title}">
+	<a href="{url}" title="{title}"{{{ if targetAttr }}} target="{targetAttr}"{{{ end }}}{{{ if relAttr }}} rel="{relAttr}"{{{ end }}}>
 		<img src="{@value}" class="card-img-top not-responsive" style="max-height: 15rem;" alt="Link Preview Image" onerror="this.parentElement.remove()" />
 	</a>
 	{{{ end }}}
@@ -10,13 +10,13 @@
 	{{{ end }}}
 	<div class="card-body">
 		<h5 class="card-title">
-			<a class="text-decoration-none" href="{url}">
-				{title}
+			<a class="text-decoration-none" href="{url}"{{{ if targetAttr }}} target="{targetAttr}"{{{ end }}}{{{ if relAttr }}} rel="{relAttr}"{{{ end }}}>
+				{title}{{{ if showExternalIcon }}} <i class="fa fa-external-link small external-link-icon"></i>{{{ end }}}
 			</a>
 		</h5>
 		<p class="card-text line-clamp-3">{description}</p>
 	</div>
-	<a href="{url}" class="card-footer text-body-secondary small d-flex gap-2 align-items-center lh-2">
+	<a href="{url}" class="card-footer text-body-secondary small d-flex gap-2 align-items-center lh-2"{{{ if targetAttr }}} target="{targetAttr}"{{{ end }}}{{{ if relAttr }}} rel="{relAttr}"{{{ end }}}>
 		{{{ if favicons.length }}}
 		{{{ each favicons }}}
 		{{{ if @first }}}
@@ -24,6 +24,6 @@
 		{{{ end }}}
 		{{{ end }}}
 		{{{ end }}}
-		<p class="d-inline-block text-truncate mb-0">{siteName} <span class="text-secondary">({hostname})</span></p>
+		<p class="d-inline-block text-truncate mb-0">{siteName} <span class="text-secondary">({hostname})</span></p>{{{ if showExternalIcon }}} <i class="fa fa-external-link small external-link-icon"></i>{{{ end }}}
 	</a>
 </div>
