@@ -2,9 +2,7 @@
 	{{{ if images.length }}}
 	{{{ each images }}}
 	{{{ if @first }}}
-	<a href="{url}" title="{title}"{{{ if targetAttr }}} target="{targetAttr}"{{{ end }}}{{{ if relAttr }}} rel="{relAttr}"{{{ end }}}>
-		<img src="{@value}" class="card-img-top not-responsive" style="max-height: 15rem;" alt="Link Preview Image" onerror="this.parentElement.remove()" />
-	</a>
+	<a href="{url}" title="{title}"{{{ if targetAttr }}} target="{targetAttr}"{{{ end }}}{{{ if relAttr }}} rel="{relAttr}"{{{ end }}}><img src="{@value}" class="card-img-top not-responsive" style="max-height: 15rem;" alt="Link Preview Image" onerror="this.parentElement.remove()" /></a>
 	{{{ end }}}
 	{{{ end }}}
 	{{{ end }}}
