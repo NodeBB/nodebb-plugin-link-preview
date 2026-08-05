@@ -80,6 +80,46 @@ async function preview(url) {
 	});
 }
 
+function isExternalLink(urlString) {
+	let urlObj;
+	let baseUrlObj;
+	try {
+		urlObj = new URL(urlString, nconf.get('url'));
+		baseUrlObj = nconf.get('url_parsed');
+	} catch (err) {
+		return false;
+	}
+
+	if (urlObj.host === null) {
+		return false;
+	}
+
+	const sameHost = urlObj.host === baseUrlObj.host &&
+		urlObj.protocol === baseUrlObj.protocol &&
+		(nconf.get('relative_path').length > 0 ? urlObj.pathname.indexOf(nconf.get('relative_path')) === 0 : true);
+	return !sameHost;
+}
+
+function buildRel(externalBlank, nofollow) {
+	const rel = [];
+	if (externalBlank) {
+		rel.push('noopener', 'noreferrer');
+	}
+	if (nofollow) {
+		rel.push('nofollow', 'ugc');
+	}
+	return rel.join(' ');
+}
+
+function externalLinkAttrs(url, md) {
+	const isExternal = isExternalLink(url);
+	return {
+		targetAttr: (md.externalBlank && isExternal) ? '_blank' : '',
+		relAttr: isExternal ? buildRel(md.externalBlank, md.nofollow) : '',
+		showExternalIcon: md.externalMark && isExternal,
+	};
+}
+
 async function process(content, { type, pid, tid, attachments }) {
 	const inlineTypes = ['default', 'activitypub.article'];
 	const processInline = inlineTypes.includes(type);
@@ -87,6 +127,13 @@ async function process(content, { type, pid, tid, attachments }) {
 	if (![embedHtml, embedImage, embedAudio, embedVideo, embedIframe].some(prop => prop === 'on')) {
 		return content;
 	}
+
+	const markdownSettings = await meta.settings.get('markdown');
+	const md = {
+		externalBlank: markdownSettings.externalBlank === 'on',
+		externalMark: markdownSettings.externalMark === 'on',
+		nofollow: markdownSettings.nofollow === undefined ? true : markdownSettings.nofollow === 'on',
+	};
 
 	const requests = new Map();
 	let attachmentHtml = '';
@@ -205,7 +252,7 @@ async function process(content, { type, pid, tid, attachments }) {
 		const options = requests.get(url);
 		const cached = cache.get(`link-preview:${url}`);
 		if (cached) {
-			const html = await render(cached);
+			const html = await render(cached, md);
 			if (html) {
 				switch (options.type) {
 					case 'inline': {
@@ -224,7 +271,11 @@ async function process(content, { type, pid, tid, attachments }) {
 			}
 		} else {
 			if (options.type === 'attachment') {
-				placeholderHtml += `<p><a href="${url}" rel="nofollow ugc">${url}</a></p>`;
+				const { targetAttr, relAttr, showExternalIcon } = externalLinkAttrs(url, md);
+				const target = targetAttr ? ` target="${targetAttr}"` : '';
+				const rel = relAttr ? ` rel="${relAttr}"` : '';
+				const icon = showExternalIcon ? ' <i class="fa fa-external-link small external-link-icon"></i>' : '';
+				placeholderHtml += `<p><a href="${url}"${target}${rel}>${url}${icon}</a></p>`;
 			}
 			cold.add(url);
 		}
@@ -246,7 +297,7 @@ async function process(content, { type, pid, tid, attachments }) {
 				const parsedUrl = new URL(url);
 				preview.hostname = parsedUrl.hostname;
 
-				const html = await render(preview);
+				const html = await render(preview, md);
 				if (html) {
 					switch (options.type) {
 						case 'inline': {
@@ -269,7 +320,11 @@ async function process(content, { type, pid, tid, attachments }) {
 			}));
 
 			const placeholderHtml = Array.from(failures).reduce((html, cur) => {
-				html += `<p><a href="${cur}" rel="nofollow ugc">${cur}</a></p>`;
+				const { targetAttr, relAttr, showExternalIcon } = externalLinkAttrs(cur, md);
+				const target = targetAttr ? ` target="${targetAttr}"` : '';
+				const rel = relAttr ? ` rel="${relAttr}"` : '';
+				const icon = showExternalIcon ? ' <i class="fa fa-external-link small external-link-icon"></i>' : '';
+				html += `<p><a href="${cur}"${target}${rel}>${cur}${icon}</a></p>`;
 				return html;
 			}, '');
 			let modified = content;
@@ -320,7 +375,7 @@ async function process(content, { type, pid, tid, attachments }) {
 	return modified;
 }
 
-async function render(preview) {
+async function render(preview, md) {
 	const { app } = nodebb.require('./src/webserver');
 	const { embedHtml, embedImage, embedAudio, embedVideo, embedIframe } = await meta.settings.get('link-preview');
 
@@ -329,6 +384,11 @@ async function render(preview) {
 	if (!preview.contentType) {
 		return false;
 	}
+
+	const { targetAttr, relAttr, showExternalIcon } = externalLinkAttrs(preview.url, md);
+	preview.targetAttr = targetAttr;
+	preview.relAttr = relAttr;
+	preview.showExternalIcon = showExternalIcon;
 
 	if (embedHtml && preview.contentType.startsWith('text/html')) {
 		return await app.renderAsync('partials/link-preview/html', preview);
