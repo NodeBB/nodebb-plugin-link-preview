@@ -42,7 +42,7 @@
     "@eslint/js": "10.0.1",
     "eslint-config-nodebb": "2.0.3",
     "husky": "9.1.7",
-    "lint-staged": "17.0.8"
+    "lint-staged": "17.5.0"
   },
   "dependencies": {
     "link-preview-js": "^5.0.0",
