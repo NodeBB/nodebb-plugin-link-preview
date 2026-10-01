@@ -20,6 +20,8 @@ const routeHelpers = nodebb.require('./src/routes/helpers');
 
 const controllers = require('./lib/controllers');
 
+const MAX_PREVIEWS_PER_POST = 10;
+
 const plugin = module.exports;
 
 plugin.init = async (params) => {
@@ -201,7 +203,7 @@ async function process(content, { type, pid, tid, attachments }) {
 
 	// Render cache hits immediately
 	const cold = new Set();
-	await Promise.all(Array.from(requests.keys()).map(async (url) => {
+	await Promise.all(Array.from(requests.keys().slice(0, MAX_PREVIEWS_PER_POST)).map(async (url) => {
 		const options = requests.get(url);
 		const cached = cache.get(`link-preview:${url}`);
 		if (cached) {
@@ -412,7 +414,7 @@ plugin.onPost = async ({ post }) => {
 
 	// Only match standalone URLs on their own line
 	const lines = post.content.split('\n');
-	const urls = lines.filter(line => isURL(line));
+	const urls = [...new Set(lines.filter(line => isURL(line)))].slice(0, MAX_PREVIEWS_PER_POST);
 
 	let previews = await Promise.all(urls.map(async url => await preview(url)));
 	previews = previews.filter(Boolean);
