@@ -203,7 +203,7 @@ async function process(content, { type, pid, tid, attachments }) {
 
 	// Render cache hits immediately
 	const cold = new Set();
-	await Promise.all(Array.from(requests.keys().slice(0, MAX_PREVIEWS_PER_POST)).map(async (url) => {
+	await Promise.all(Array.from(requests.keys()).slice(0, MAX_PREVIEWS_PER_POST).map(async (url) => {
 		const options = requests.get(url);
 		const cached = cache.get(`link-preview:${url}`);
 		if (cached) {
